@@ -1,0 +1,41 @@
+﻿@page "/"
+@using WebUI.Services
+@using Common.DTOs
+@inject CatalogService CatalogService
+
+<PageTitle>E-Ticaret Vitrini</PageTitle>
+
+<div class="container">
+    <h1>Hoş Geldiniz!</h1>
+    <div class="row">
+        @if (products == null)
+        {
+            <p>Ürünler yükleniyor...</p>
+        }
+        else
+        {
+            @foreach (var prod in products)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@prod.Name</h5>
+                            <p class="card-text">@prod.Description</p>
+                            <p class="fw-bold text-primary">@prod.Price.ToString("C")</p>
+                            <button class="btn btn-success">Sepete Ekle</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<ProductDto>? products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await CatalogService.GetProducts();
+    }
+}

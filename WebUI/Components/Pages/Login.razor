@@ -1,0 +1,57 @@
+@page "/login"
+@using WebUI.Services
+@using Blazored.LocalStorage
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@inject ILocalStorageService LocalStorage
+
+<div class="container mt-5 col-md-4">
+    <div class="card shadow">
+        <div class="card-body">
+            <h3>Giriş Yap</h3>
+            <div class="mb-3">
+                <label>Kullanıcı Adı</label>
+                <input @bind="username" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label>Şifre</label>
+                <input @bind="password" type="password" class="form-control" />
+            </div>
+            <button @onclick="HandleLogin" class="btn btn-primary w-100">Giriş</button>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <p class="text-danger mt-2">@errorMessage</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string errorMessage = "";
+
+    private async Task HandleLogin()
+    {
+        errorMessage = ""; // Hata mesajını temizle
+        try 
+        {
+            var token = await AuthService.Login(username, password);
+
+            if (token != null)
+            {
+                // Token'ı tarayıcıya güvenli bir şekilde kaydediyoruz
+                await LocalStorage.SetItemAsync("authToken", token);
+                Nav.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = "Kullanıcı adı veya şifre hatalı!";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Bağlantı hatası: " + ex.Message;
+        }
+    }
+}

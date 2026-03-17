@@ -1,0 +1,59 @@
+services:
+  # catalog veritabanı
+  catalog.db:
+    image: postgres:latest
+    container_name: catalog.db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=CatalogDb
+    ports:
+      - "5431:5432"
+
+  # identity veritabanı
+  identity.db:
+    image: postgres:latest
+    container_name: identity.db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=IdentityDb
+    ports:
+      - "5432:5432"
+
+  # Basket Veritabanı 
+  basket.db:
+    image: postgres:latest
+    container_name: basket.db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=BasketDb
+    ports:
+      - "5433:5432"
+
+  # Discount Veritabanı
+  discount.db:
+    image: postgres:latest
+    container_name: discount.db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=DiscountDb
+    ports:
+      - "5434:5432"
+
+  # Order Veritabanı
+  order.db:
+    image: postgres:latest
+    container_name: order.db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=OrderDb
+    ports:
+      - "5435:5432"
+
+networks:
+  default:
+    name: ecommerce-network
