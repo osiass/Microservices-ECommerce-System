@@ -1,4 +1,4 @@
-﻿namespace Common.Dtos;
+namespace Common.DTOs;
 
 public class ShoppingCartDto
 {

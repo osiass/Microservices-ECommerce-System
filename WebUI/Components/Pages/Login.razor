@@ -4,6 +4,7 @@
 @inject AuthService AuthService
 @inject NavigationManager Nav
 @inject ILocalStorageService LocalStorage
+@inject ToastService ToastService
 
 <div class="container mt-5 col-md-4">
     <div class="card shadow">
@@ -33,7 +34,7 @@
 
     private async Task HandleLogin()
     {
-        errorMessage = ""; // Hata mesajını temizle
+        errorMessage = ""; 
         try 
         {
             var token = await AuthService.Login(username, password);
@@ -42,16 +43,20 @@
             {
                 // Token'ı tarayıcıya güvenli bir şekilde kaydediyoruz
                 await LocalStorage.SetItemAsync("authToken", token);
-                Nav.NavigateTo("/");
+                await LocalStorage.SetItemAsync("userName", username);
+                ToastService.Notify("Giriş başarılı! Hoş geldiniz.", ToastLevel.Success);
+                Nav.NavigateTo("/", forceLoad: true);
             }
             else
             {
                 errorMessage = "Kullanıcı adı veya şifre hatalı!";
+                ToastService.Notify("Giriş başarısız!", ToastLevel.Error);
             }
         }
         catch (Exception ex)
         {
             errorMessage = "Bağlantı hatası: " + ex.Message;
+            ToastService.Notify("Bağlantı hatası oluştu!", ToastLevel.Error);
         }
     }
 }

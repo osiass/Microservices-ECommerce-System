@@ -1,0 +1,136 @@
+@page "/product/{id}"
+@using Common.DTOs
+@using WebUI.Services
+@inject CatalogService CatalogService
+@inject BasketService BasketService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStore
+@inject NavigationManager NavigationManager
+@inject ToastService ToastService
+
+@if (product == null)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container mt-5">
+        <div class="row">
+            <!-- Ürün Görseli -->
+            <div class="col-md-6 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 20px;">
+                    <img src="https://picsum.photos/600/600?random=@product.Id" class="img-fluid" alt="@product.Name">
+                </div>
+            </div>
+
+            <!-- Ürün Detayları -->
+            <div class="col-md-6">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Ana Sayfa</a></li>
+                        <li class="breadcrumb-item active">Ürün Detayı</li>
+                    </ol>
+                </nav>
+
+                <h1 class="display-5 fw-bold mb-3">@product.Name</h1>
+                <div class="d-flex align-items-center mb-4">
+                    <span class="badge bg-primary me-2">Teknoloji</span>
+                    <span class="text-muted"><i class="bi bi-star-fill text-warning"></i> 4.8 (120 Değerlendirme)</span>
+                </div>
+
+                <h2 class="text-primary fw-bold mb-4">@product.Price.ToString("C")</h2>
+
+                <p class="text-secondary mb-4" style="line-height: 1.8;">
+                    @product.Description
+                </p>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary btn-lg py-3" style="border-radius: 15px;" 
+                            @onclick="AddToCart" disabled="@isAdding">
+                        @if (isAdding)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span> <span>Ekleniyor...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-cart-plus-fill me-2"></i> <span>Sepete Ekle</span>
+                        }
+                    </button>
+                    <button class="btn btn-outline-secondary btn-lg py-3" style="border-radius: 15px;" @onclick='@(() => NavigationManager.NavigateTo("/"))'>
+                        Alışverişe Devam Et
+                    </button>
+                </div>
+
+                <div class="mt-5 p-4 bg-light" style="border-radius: 20px;">
+                    <h5 class="fw-bold mb-3">Ürün Özellikleri</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Orijinal Ürün</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> 2 Yıl Garanti</li>
+                        <li><i class="bi bi-check-circle-fill text-success me-2"></i> Ücretsiz Kargo</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+    private ProductDto? product;
+    private bool isAdding = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        product = await CatalogService.GetProductById(Id);  
+    }
+
+    private async Task AddToCart()
+    {
+        if (product == null || isAdding) return;
+
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        var user = await LocalStore.GetItemAsync<string>("userName");
+
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(user))
+        {
+            // Misafir kullanıcı için bir ID oluştur veya mevcut olanı al
+            user = await LocalStore.GetItemAsync<string>("guestId");
+            if (string.IsNullOrEmpty(user))
+            {
+                user = "guest-" + Guid.NewGuid().ToString().Substring(0, 8);
+                await LocalStore.SetItemAsync("guestId", user);
+            }
+            token = string.Empty;
+        }
+
+        isAdding = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await BasketService.AddItem(token, user, product);
+            if (result.Success)
+            {
+                ToastService.Notify($"{product.Name} sepete eklendi.", ToastLevel.Success);
+                NavigationManager.NavigateTo("/basket");
+            }
+            else
+            {
+                ToastService.Notify($"Hata: {result.Message}", ToastLevel.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify($"Hata: {ex.Message}", ToastLevel.Error);
+        }
+        finally
+        {
+            isAdding = false;
+            StateHasChanged();
+        }
+    }
+}

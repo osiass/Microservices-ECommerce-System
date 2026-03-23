@@ -1,0 +1,118 @@
+@using WebUI.Services
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="toast-container">
+    @foreach (var toast in ToastService.Messages)
+    {
+        <div class="toast-card @toast.Level.ToString().ToLower()" @key="toast.Id">
+            <div class="toast-icon">
+                @if (toast.Level == ToastLevel.Success)
+                {
+                    <i class="bi bi-check-circle-fill"></i>
+                }
+                else if (toast.Level == ToastLevel.Error)
+                {
+                    <i class="bi bi-x-circle-fill"></i>
+                }
+                else
+                {
+                    <i class="bi bi-info-circle-fill"></i>
+                }
+            </div>
+            <div class="toast-body">
+                @toast.Text
+            </div>
+            <button class="toast-close" @onclick="() => ToastService.Remove(toast.Id)">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    }
+</div>
+
+<style>
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        pointer-events: none;
+    }
+
+    .toast-card {
+        pointer-events: auto;
+        min-width: 300px;
+        max-width: 450px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border-left: 6px solid #ccc;
+        animation: toast-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+    }
+
+    @@keyframes toast-in {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast-card.success { border-left-color: #2ecc71; }
+    .toast-card.error { border-left-color: #e74c3c; }
+    .toast-card.info { border-left-color: #3498db; }
+    .toast-card.warning { border-left-color: #f1c40f; }
+
+    .toast-icon {
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+    }
+
+    .success .toast-icon { color: #2ecc71; }
+    .error .toast-icon { color: #e74c3c; }
+    .info .toast-icon { color: #3498db; }
+
+    .toast-body {
+        flex: 1;
+        font-weight: 500;
+        color: #2d3436;
+    }
+
+    .toast-close {
+        background: none;
+        border: none;
+        color: #b2bec3;
+        cursor: pointer;
+        font-size: 20px;
+        padding: 0;
+        transition: color 0.2s;
+    }
+
+    .toast-close:hover {
+        color: #636e72;
+    }
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ToastService.OnChange += OnToastChanged;
+    }
+
+    private async void OnToastChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnChange -= OnToastChanged;
+    }
+}

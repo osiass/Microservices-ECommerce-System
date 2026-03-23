@@ -3,6 +3,7 @@ using WebUI.Services;
 using Blazored.LocalStorage;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -13,13 +14,19 @@ builder.Services.AddBlazoredLocalStorage();
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<BasketService>();
+builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<ToastService>();
 
+// API Gateway istemcisi - Aspire Service Discovery ile servis isminden adresi çözer
 builder.Services.AddHttpClient("GatewayClient", client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7067"); 
+    client.BaseAddress = new Uri("https://gateway");
 });
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

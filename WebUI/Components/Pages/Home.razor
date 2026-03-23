@@ -1,28 +1,118 @@
-﻿@page "/"
+@page "/"
 @using WebUI.Services
 @using Common.DTOs
+@using Blazored.LocalStorage
+@inject BasketService BasketService
 @inject CatalogService CatalogService
+@inject ToastService ToastService
+@inject ILocalStorageService LocalStore
+@inject NavigationManager Nav
 
-<PageTitle>E-Ticaret Vitrini</PageTitle>
+<PageTitle>E-Ticaret Vitrini - Keşfet</PageTitle>
 
-<div class="container">
-    <h1>Hoş Geldiniz!</h1>
-    <div class="row">
-        @if (products == null)
+<div class="container mt-4 pt-2">
+    <!-- Search & Filter Header -->
+    <div class="row mb-5 align-items-center">
+        <div class="col-lg-6 mb-3 mb-lg-0">
+            <h1 class="fw-bold display-6 mb-1">Keşfetmeye Başla</h1>
+            <p class="text-muted">En yeni teknoloji ürünlerini senin için seçtik.</p>
+        </div>
+        <div class="col-lg-6">
+            <div class="input-group shadow-sm" style="border-radius: 15px; overflow: hidden;">
+                <span class="input-group-text bg-white border-end-0 px-3">
+                    <i class="bi bi-search text-primary"></i>
+                </span>
+                <input type="text" class="form-control border-start-0 ps-0 py-3" 
+                       placeholder="Ürün adı ara..." 
+                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleKeyUp" />
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="btn btn-white border-y border-end-0 text-muted px-2" @onclick="ClearSearch">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                }
+                <button class="btn btn-primary px-4" @onclick="LoadProducts">Ara</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Filter Chips -->
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <button class="btn btn-sm rounded-pill px-4 py-2 @(selectedCategory == null ? "btn-primary" : "btn-outline-secondary")" 
+                @onclick="() => FilterByCategory(null)">Hepsi</button>
+        @foreach (var cat in categories)
         {
-            <p>Ürünler yükleniyor...</p>
+            <button class="btn btn-sm rounded-pill px-4 py-2 @(selectedCategory == cat ? "btn-primary" : "btn-outline-secondary")" 
+                    @onclick="() => FilterByCategory(cat)">@cat</button>
+        }
+    </div>
+
+    <!-- Product Grid -->
+    <div class="row g-4">
+        @if (isLoading)
+        {
+            @for (int i = 0; i < 6; i++)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 20px;">
+                        <div class="bg-light w-100" style="height: 200px; border-radius: 20px 20px 0 0;"></div>
+                        <div class="card-body p-4">
+                            <div class="placeholder-glow">
+                                <span class="placeholder col-7 mb-2"></span>
+                                <span class="placeholder col-4"></span>
+                                <span class="placeholder col-10"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else if (products == null || !products.Any())
+        {
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-search text-muted mb-3" style="font-size: 3rem;"></i>
+                <h4 class="fw-bold">Sonuç Bulunamadı</h4>
+                <p class="text-muted">Farklı bir arama terimi veya kategori deneyebilirsin.</p>
+                <button class="btn btn-outline-primary mt-2" @onclick="ResetFilters">Tüm Ürünleri Gör</button>
+            </div>
         }
         else
         {
             @foreach (var prod in products)
             {
-                <div class="col-md-4 mb-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">@prod.Name</h5>
-                            <p class="card-text">@prod.Description</p>
-                            <p class="fw-bold text-primary">@prod.Price.ToString("C")</p>
-                            <button class="btn btn-success">Sepete Ekle</button>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100 product-card" style="border-radius: 20px; transition: all 0.3s ease;">
+                        <div class="position-relative overflow-hidden" 
+                             style="height: 220px; border-radius: 20px 20px 0 0; background: #f8f9fa;"
+                             @onclick='() => Nav.NavigateTo($"/product/{prod.Id}")'>
+                            <div class="d-flex align-items-center justify-content-center h-100">
+                                <i class="bi bi-laptop text-secondary opacity-25" style="font-size: 5rem;"></i>
+                            </div>
+                            <span class="badge bg-primary position-absolute top-0 start-0 m-3 px-3 py-2" style="border-radius: 10px;">@prod.Category</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold @(addedProductId == prod.Id.ToString() ? "text-success" : "")" style="cursor:pointer" @onclick='() => Nav.NavigateTo($"/product/{prod.Id}")'>@prod.Name</h5>
+                            <p class="text-muted small mb-3 text-truncate-2">@prod.Description</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <h4 class="fw-bold text-dark mb-0">@prod.Price.ToString("C2")</h4>
+                                <button class="btn @(addedProductId == prod.Id.ToString() ? "btn-success" : "btn-primary") rounded-pill px-4" 
+                                        @onclick="() => AddToCart(prod)" 
+                                        disabled="@busyProducts.Contains(prod.Id.ToString())">
+                                    @if (busyProducts.Contains(prod.Id.ToString()))
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    }
+                                    else if (addedProductId == prod.Id.ToString())
+                                    {
+                                        <i class="bi bi-check-lg"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-plus-lg me-1"></i> <span>Ekle</span>
+                                    }
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -31,11 +121,141 @@
     </div>
 </div>
 
+<style>
+    .product-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+    }
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+
 @code {
     private List<ProductDto>? products;
+    private string searchTerm = "";
+    private string? selectedCategory;
+    private bool isLoading = true;
+    private HashSet<string> busyProducts = new();
+    private string? addedProductId;
+
+    private List<string> categories = new() { "Klavye", "Mouse", "Kasa", "Kulaklık", "Monitör" };
 
     protected override async Task OnInitializedAsync()
     {
-        products = await CatalogService.GetProducts();
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        StateHasChanged();
+        try
+        {
+            products = await CatalogService.GetProducts(searchTerm, selectedCategory);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ürün yükleme hatası: {ex.Message}");
+            ToastService.Notify("Ürünler yüklenirken bir sorun oluştu.", ToastLevel.Error);
+            products = new();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FilterByCategory(string? category)
+    {
+        selectedCategory = category;
+        await LoadProducts();
+    }
+
+    private async Task ClearSearch()
+    {
+        searchTerm = "";
+        await LoadProducts();
+    }
+
+    private async Task ResetFilters()
+    {
+        searchTerm = "";
+        selectedCategory = null;
+        await LoadProducts();
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadProducts();
+        }
+    }
+
+    private async Task AddToCart(ProductDto product)
+    {
+        var productKey = product.Id.ToString();
+        if (busyProducts.Contains(productKey)) return; 
+
+        var authToken = await LocalStore.GetItemAsync<string>("authToken");
+        var userName = await LocalStore.GetItemAsync<string>("userName");
+
+        if (string.IsNullOrWhiteSpace(authToken) || string.IsNullOrWhiteSpace(userName) || authToken == "null")
+        {
+            // Misafir kullanıcı için bir ID oluştur veya mevcut olanı al
+            userName = await LocalStore.GetItemAsync<string>("guestId");
+            if (string.IsNullOrEmpty(userName))
+            {
+                userName = "guest-" + Guid.NewGuid().ToString().Substring(0, 8);
+                await LocalStore.SetItemAsync("guestId", userName);
+            }
+            authToken = string.Empty;
+        }
+
+        busyProducts.Add(productKey);
+        StateHasChanged();
+
+        try
+        {
+            var result = await BasketService.AddItem(authToken, userName, product);
+            if (result.Success)
+            {
+                ToastService.Notify($"{product.Name} sepete eklendi!", ToastLevel.Success);
+                addedProductId = productKey;
+                StateHasChanged();
+                await Task.Delay(1000);
+                addedProductId = null;
+            }
+            else
+            {
+                addedProductId = null;
+                if (result.Message.Contains("401"))
+                {
+                    await LocalStore.RemoveItemAsync("authToken");
+                    await LocalStore.RemoveItemAsync("userName");
+                    ToastService.Notify("Oturumunuzun süresi dolmuş. Lütfen tekrar giriş yapın.", ToastLevel.Warning);
+                    Nav.NavigateTo("/login", forceLoad: true);
+                }
+                else
+                {
+                    ToastService.Notify($"Hata: {result.Message}", ToastLevel.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Sepete ekleme hatası: {ex.Message}");
+            ToastService.Notify("Bağlantı sorunu nedeniyle ürün eklenemedi.", ToastLevel.Error);
+        }
+        finally
+        {
+            busyProducts.Remove(productKey);
+            StateHasChanged();
+        }
     }
 }

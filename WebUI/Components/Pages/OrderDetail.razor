@@ -1,0 +1,140 @@
+@page "/order-detail/{Id:int}"
+@using WebUI.Services
+@using Common.DTOs
+@inject OrderService OrderService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStore
+@inject NavigationManager Nav
+
+<div class="container mt-5 pt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">Sipariş Detayı</h2>
+            <p class="text-muted mb-0">Sipariş No: <span class="text-primary fw-bold">#ORD-@Id.ToString("D5")</span></p>
+        </div>
+        <button class="btn btn-outline-secondary" @onclick='() => Nav.NavigateTo("/my-orders")'>
+            <i class="bi bi-chevron-left"></i> Siparişlerime Dön
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+        </div>
+    }
+    else if (order == null)
+    {
+        <div class="alert alert-warning text-center">
+            <h4 class="fw-bold">Sipariş Bulunamadı!</h4>
+            <p>Aradığınız sipariş veritabanında kayıtlı görünmüyor.</p>
+            <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/my-orders")'>Listeye Dön</button>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 20px;">
+                    <div class="card-header bg-white border-0 p-4">
+                        <h5 class="fw-bold mb-0">Siparış İçeriği (@order.OrderItems.Count Ürün)</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Ürün Adı</th>
+                                        <th class="text-center">Adet</th>
+                                        <th class="text-end pe-4">Fiyat</th>
+                                        <th class="text-end pe-4">Toplam</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in order.OrderItems)
+                                    {
+                                        <tr>
+                                            <td class="ps-4">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-light rounded p-2 me-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="bi bi-box-seam text-primary" style="font-size: 1.5rem;"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0 fw-bold">@item.ProductName</h6>
+                                                        <span class="text-muted small">ID: @item.ProductId</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center fw-bold">@item.Quantity</td>
+                                            <td class="text-end pe-4">@item.Price.ToString("C2")</td>
+                                            <td class="text-end pe-4 fw-bold text-primary">@((item.Price * item.Quantity).ToString("C2"))</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 20px;">
+                    <h5 class="fw-bold mb-3">Sipariş Özeti</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Ara Toplam</span>
+                        <span>@order.TotalPrice.ToString("C2")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Kargo</span>
+                        <span class="text-success fw-bold">Ücretsiz</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between mb-0">
+                        <h5 class="fw-bold">Toplam</h5>
+                        <h5 class="fw-bold text-primary">@order.TotalPrice.ToString("C2")</h5>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm p-4" style="border-radius: 20px;">
+                    <h5 class="fw-bold mb-3">Teslimat Bilgileri</h5>
+                    <p class="text-muted small mb-1 text-uppercase fw-bold">Adres</p>
+                    <p class="mb-3">@order.AddressLine</p>
+                    
+                    <p class="text-muted small mb-1 text-uppercase fw-bold">Sipariş Durumu</p>
+                    <p class="mb-0"><span class="badge bg-success-subtle text-success px-3 py-2" style="border-radius: 8px;">Hazırlanıyor</span></p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private OrderDto? order;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+
+        if (string.IsNullOrEmpty(token))
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        try
+        {
+            order = await OrderService.GetOrderById(token, Id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Sipariş detayı yüklenirken hata oluştu: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

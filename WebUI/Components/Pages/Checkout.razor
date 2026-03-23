@@ -1,0 +1,196 @@
+@page "/checkout"
+@using WebUI.Services
+@using Common.DTOs
+@using Blazored.LocalStorage
+@inject BasketService BasketService
+@inject OrderService OrderService
+@inject ILocalStorageService LocalStore
+@inject NavigationManager Nav
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                <div class="card-header bg-dark text-white p-4 text-center">
+                    <h3 class="mb-0 fw-bold">Ödeme ve Onay</h3>
+                    <p class="text-white-50 small mb-0">Güvenli ödeme altyapısı ile siparişinizi tamamlayın</p>
+                </div>
+                <div class="card-body p-4 p-md-5 bg-light">
+                    
+                    <!-- Adres Bölümü -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary">Teslimat Adresi</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt"></i></span>
+                            <input @bind="address" class="form-control border-start-0 ps-0" placeholder="Açık adresinizi giriniz..." />
+                        </div>
+                    </div>
+
+                    <hr class="my-4 text-muted opacity-25">
+
+                    <!-- Kart Bilgileri -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary">Kart Bilgileri</label>
+                        
+                        <div class="mb-3">
+                            <label class="small text-muted mb-1">Kart Üzerindeki İsim</label>
+                            <input @bind="cardHolderName" class="form-control form-control-lg" placeholder="Ad Soyad" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="small text-muted mb-1">Kart Numarası</label>
+                            <div class="input-group">
+                                <input @bind="cardNumber" class="form-control form-control-lg" placeholder="0000 0000 0000 0000" maxlength="16" />
+                                <span class="input-group-text bg-white"><i class="bi bi-credit-card"></i></span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-4">
+                                <label class="small text-muted mb-1">Ay</label>
+                                <input @bind="expMonth" class="form-control" placeholder="AA" maxlength="2" />
+                            </div>
+                            <div class="col-4">
+                                <label class="small text-muted mb-1">Yıl</label>
+                                <input @bind="expYear" class="form-control" placeholder="YY" maxlength="2" />
+                            </div>
+                            <div class="col-4">
+                                <label class="small text-muted mb-1">CVV</label>
+                                <input @bind="cvv" type="password" class="form-control" placeholder="***" maxlength="3" />
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger py-2 small mb-4">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                        </div>
+                    }
+
+                    <button class="btn btn-dark btn-lg w-100 py-3 fw-bold shadow-sm mt-2 transition-transform hover-scale" 
+                            @onclick="ConfirmOrder" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span> <span>İşleniyor...</span>
+                        }
+                        else
+                        {
+                            <span>Siparişi Tamamla</span>
+                        }
+                    </button>
+                    
+                    <p class="text-center text-muted small mt-4">
+                        <i class="bi bi-shield-lock-fill me-1 text-success"></i> 
+                        256-bit SSL ile şifrelenmiş güvenli ödeme.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .transition-transform { transition: transform 0.2s; }
+    .hover-scale:hover { transform: translateY(-2px); }
+</style>
+
+@code {
+    private string address = "";
+    private string cardNumber = "";
+    private string cardHolderName = "";
+    private string expMonth = "";
+    private string expYear = "";
+    private int cvv;
+    
+    private string errorMessage = "";
+    private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        var user = await LocalStore.GetItemAsync<string>("userName");
+
+        //Token veya kullanıcı adı yoksa sayfaya eriştirmeden login atı
+        if (string.IsNullOrEmpty(token) || token == "null" || string.IsNullOrEmpty(user))
+        {
+            Nav.NavigateTo("/login");
+        }
+    }
+    
+    private async Task ConfirmOrder()
+    {
+        errorMessage = "";
+        
+        if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(cardNumber) || string.IsNullOrWhiteSpace(cardHolderName))
+        {
+            errorMessage = "Lütfen tüm alanları eksiksiz doldurun.";
+            return;
+        }
+
+        isProcessing = true;
+        
+        try 
+        {
+            var token = await LocalStore.GetItemAsync<string>("authToken");
+            var user = await LocalStore.GetItemAsync<string>("userName");
+
+            if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(user))
+            {
+                // Sepeti APIden güncel olarak çek
+                var basket = await BasketService.GetBasket(token, user);
+                
+                if (basket == null || basket.Items == null || !basket.Items.Any())
+                {
+                    errorMessage = "Sepetiniz boş olduğu için sipariş verilemiyor.";
+                    isProcessing = false;
+                    return;
+                }
+
+                var checkoutDto = new BasketCheckoutDto
+                {
+                    UserName = user,
+                    AddressLine = address,
+                    CardNumber = cardNumber,
+                    CardHolderName = cardHolderName,
+                    ExpirationMonth = int.TryParse(expMonth, out var m) ? m : 0,
+                    ExpirationYear = int.TryParse(expYear, out var y) ? y : 0,
+                    CVV = cvv,
+                    Items = basket.Items
+                };
+
+                // OrderService.Checkout metodundan dönen Tuple değerini kontrol 
+                var result = await OrderService.Checkout(token, checkoutDto);
+
+                if (result.Success)
+                {
+                    // Ödeme başarılı sepeti temizle
+                    var deleteRes = await BasketService.DeleteBasket(token, user);
+                    if (!deleteRes.Success)
+                    {
+                        Console.WriteLine($"[Checkout.razor] Sepet API'den silinemedi! Hata: {deleteRes.Message}");
+                    }
+                    Nav.NavigateTo("/order-success");
+                }
+                else
+                {
+                    errorMessage = $"Sipariş tamamlanamadı: {result.Message}";
+                    var diag = await OrderService.GetAuthStatus(token);
+                    errorMessage += $" | Teşhis: {diag}";
+                }
+            }
+            else
+            {
+                Nav.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Beklenmedik bir hata oluştu: " + ex.Message;
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

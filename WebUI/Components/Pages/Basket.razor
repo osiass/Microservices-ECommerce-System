@@ -1,0 +1,308 @@
+@page "/basket"
+@using WebUI.Services
+@using Blazored.LocalStorage
+@using Common.DTOs
+@inject BasketService BasketService
+@inject OrderService OrderService
+@inject ToastService ToastService
+@inject ILocalStorageService LocalStore
+@inject NavigationManager Nav
+
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <!-- Sepet Listei -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm p-4" style="border-radius: 20px;">
+                <h3 class="fw-bold mb-4">Alışveriş Sepetim</h3>
+
+                @if (cart == null)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-3 text-muted">Sepetiniz yükleniyor...</p>
+                    </div>
+                }
+                else if (!cart.Items.Any())
+                {
+                    <div class="text-center py-5">
+                        <img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" style="width: 150px; opacity: 0.5;" class="mb-3" />
+                        <h4 class="text-muted">Sepetiniz şu an bomboş!</h4>
+                        <a href="/" class="btn btn-primary mt-3 px-4 py-2" style="border-radius: 12px;">Alışverişe Başla</a>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var item in cart.Items.OrderBy(x => x.ProductName))
+                    {
+                        <div class="item-card d-flex align-items-center mb-3 p-3" style="background: #f8f9fa; border-radius: 15px;">
+                            <img src="https://picsum.photos/100/100?random=@item.ProductId" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;" />
+                            
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-1">@item.ProductName</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-primary fw-bold mb-0">@item.Price.ToString("C")</span>
+                                    @if(item.OriginalPrice > item.Price)
+                                    {
+                                        <small class="text-muted text-decoration-line-through">@item.OriginalPrice.ToString("C")</small>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.7rem;">-%@((int)((1 - item.Price / item.OriginalPrice) * 100))</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center me-4">
+                                <button class="btn btn-sm btn-outline-secondary rounded-circle" @onclick="() => UpdateQuantity(item, -1)">-</button>
+                                <span class="mx-3 fw-bold">@item.Quantity</span>
+                                <button class="btn btn-sm btn-outline-secondary rounded-circle" @onclick="() => UpdateQuantity(item, 1)">+</button>
+                            </div>
+
+                            <button class="btn btn-link text-danger p-0" @onclick="() => RemoveItem(item)">
+                                <i class="bi bi-trash-fill fs-5"></i>
+                            </button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Özet Paneli -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm p-4 sticky-top" style="border-radius: 20px; top: 20px;">
+                <h4 class="fw-bold mb-4">Sipariş Özeti</h4>
+                
+                <div class="d-flex justify-content-between mb-3 text-secondary">
+                    <span>Ara Toplam</span>
+                    <span>@((cart?.Items.Sum(x => (x.OriginalPrice > 0 ? x.OriginalPrice : x.Price) * x.Quantity) ?? 0).ToString("C"))</span>
+                </div>
+                @if(cart != null && cart.Items.Any(x => x.OriginalPrice > x.Price))
+                {
+                    <div class="d-flex justify-content-between mb-3 text-success">
+                        <span>İndirim</span>
+                        <span>-@((cart.Items.Sum(x => (x.OriginalPrice - x.Price) * x.Quantity)).ToString("C"))</span>
+                    </div>
+                }
+                <div class="d-flex justify-content-between mb-3 text-secondary">
+                    <span>Kargo</span>
+                    <span class="text-success">Ücretsiz</span>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between mb-4 mt-2">
+                    <span class="h5 fw-bold">Toplam</span>
+                    <span class="h5 fw-bold text-primary">@((cart?.Items.Sum(x => x.Price * x.Quantity) ?? 0).ToString("C"))</span>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-uppercase">Teslimat Adresi</label>
+                    <textarea @bind="address" class="form-control" rows="3" placeholder="Açık adresinizi buraya giriniz..." style="border-radius: 12px;"></textarea>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger py-2 small mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                    </div>
+                }
+
+                <button class="btn btn-primary btn-lg w-100 py-3 mb-2" style="border-radius: 15px;" 
+                        @onclick="ConfirmCheckout" 
+                        disabled="@(isCheckingOut || cart == null || !cart.Items.Any())">
+                    @if (isCheckingOut)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span> <span>İşleniyor...</span>
+                    }
+                    else
+                    {
+                        <span>Siparişi Onayla</span> <i class="bi bi-arrow-right ms-2"></i>
+                    }
+                </button>
+
+                <button class="btn btn-outline-danger btn-sm w-100" style="border-radius: 10px;" 
+                        @onclick="ManualResetBasket" 
+                        disabled="@isCheckingOut">
+                    <i class="bi bi-trash me-2"></i>Sepeti Temizle
+                </button>
+                <div class="text-center mt-3 text-secondary" style="font-size: 1.5rem;">
+                    <i class="bi bi-credit-card-2-front me-3"></i>
+                    <i class="bi bi-paypal me-3"></i>
+                    <i class="bi bi-apple"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .item-card { transition: all 0.2s; }
+    .item-card:hover { transform: translateX(5px); background: #f0f1f2 !important; }
+</style>
+
+@code {
+    private ShoppingCartDto cart = new();
+    private string address = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBasket();
+    }
+
+    private async Task LoadBasket()
+    {
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        var user = await LocalStore.GetItemAsync<string>("userName");
+
+        if (string.IsNullOrEmpty(user))
+        {
+            user = await LocalStore.GetItemAsync<string>("guestId");
+        }
+
+        if (!string.IsNullOrEmpty(user))
+        {
+            cart = await BasketService.GetBasket(token ?? string.Empty, user);
+        }
+    }
+
+    private async Task UpdateQuantity(BasketItemDto item, int change)
+    {
+        var newQuantity = item.Quantity + change;
+
+        if (newQuantity < 1)
+        {
+            await RemoveItem(item);
+            return;
+        }
+
+        item.Quantity = newQuantity;
+        
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        var user = await LocalStore.GetItemAsync<string>("userName") ?? await LocalStore.GetItemAsync<string>("guestId");
+
+        if (cart != null && !string.IsNullOrEmpty(user))
+        {
+            await BasketService.UpdateBasket(token ?? string.Empty, cart);
+            ToastService.Notify($"{item.ProductName} miktarı güncellendi.", ToastLevel.Success);
+        }
+    }
+
+    private async Task RemoveItem(BasketItemDto item)
+    {
+        if(cart == null) return;
+
+        cart.Items.Remove(item);
+        
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        var user = await LocalStore.GetItemAsync<string>("userName") ?? await LocalStore.GetItemAsync<string>("guestId");
+
+        if(!string.IsNullOrEmpty(user))
+        {
+            await BasketService.UpdateBasket(token ?? string.Empty, cart);
+            ToastService.Notify($"{item.ProductName} sepetten çıkarıldı.", ToastLevel.Info);
+        }
+    }
+
+    private string errorMessage = "";
+    private bool isCheckingOut = false;
+
+    private async Task ConfirmCheckout()
+    {
+        errorMessage = "";
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        var user = await LocalStore.GetItemAsync<string>("userName");
+
+        // GUEST ENGELLEME
+        if (string.IsNullOrEmpty(token) || token == "null" || string.IsNullOrEmpty(user))
+        {
+            ToastService.Notify("Sipariş vermek için lütfen önce giriş yapınız.", ToastLevel.Warning);
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(address))
+        {
+            errorMessage = "Lütfen teslimat adresini giriniz.";
+            return;
+        }
+
+        if (cart == null || cart.Items == null || !cart.Items.Any())
+        {
+            errorMessage = "Sepetiniz boş!";
+            return;
+        }
+
+        isCheckingOut = true;
+        StateHasChanged();
+
+        try
+        {
+            var checkoutDto = new BasketCheckoutDto
+            {
+                UserName = user,
+                AddressLine = address,
+                Items = cart.Items,
+                CardNumber = "4444555566667777",
+                CardHolderName = "Osiass Test",
+                ExpirationMonth = 12,
+                ExpirationYear = 2028,
+                CVV = 123
+            };
+
+            // OrderService result bir Tuple döner
+            var result = await OrderService.Checkout(token, checkoutDto);
+
+            if (result.Success)
+            {
+                // APIde sepeti temizle
+                await BasketService.DeleteBasket(token, user);
+                
+                // UIda sepeti sıfırla
+                cart = new ShoppingCartDto { UserName = user, Items = new List<BasketItemDto>() };
+                address = "";
+                
+                ToastService.Notify("Siparişiniz başarıyla alındı!", ToastLevel.Success);
+                
+                StateHasChanged();
+                // Sipariş başarılı sayfasına yönlendir
+                Nav.NavigateTo("/order-success");
+            }
+            else
+            {
+                errorMessage = $"Sipariş onaylanamadı: {result.Message}";
+                // Her türlü hata durumunda teşhis mesajını getir (Diagnostic)
+                var diag = await OrderService.GetAuthStatus(token);
+                errorMessage += $" | Teşhis: {diag}";
+                ToastService.Notify("Sipariş hatası!", ToastLevel.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Bir hata oluştu: {ex.Message}";
+        }
+        finally
+        {
+            isCheckingOut = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ManualResetBasket()
+    {
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        var user = await LocalStore.GetItemAsync<string>("userName") ?? await LocalStore.GetItemAsync<string>("guestId");
+        
+        if (string.IsNullOrEmpty(user))
+        {
+            ToastService.Notify("Kullanıcı bulunamadı.", ToastLevel.Error);
+            return;
+        }
+
+        var res = await BasketService.DeleteBasket(token ?? "", user);
+        if (res.Success)
+        {
+            cart = new ShoppingCartDto { UserName = user, Items = new List<BasketItemDto>() };
+            ToastService.Notify("Sepet başarıyla temizlendi.", ToastLevel.Success);
+            StateHasChanged();
+        }
+        else
+        {
+            ToastService.Notify($"Hata (Manual): {res.Message}", ToastLevel.Error);
+        }
+    }
+}

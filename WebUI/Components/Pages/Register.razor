@@ -1,0 +1,69 @@
+@page "/register"
+@using WebUI.Services
+@using Common.DTOs
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@inject ToastService ToastService
+
+<div class="container mt-5 col-md-4">
+    <div class="card shadow border-0">
+        <div class="card-body">
+            <h3 class="text-center mb-4">Yeni Üye Kaydı</h3>
+            
+            <div class="mb-3">
+                <label class="form-label">Kullanıcı Adı</label>
+                <input @bind="model.UserName" class="form-control" placeholder="kullanıcı adı" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">E-Posta</label>
+                <input @bind="model.Email" type="email" class="form-control" placeholder="email@adres.com" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Şifre</label>
+                <input @bind="model.Password" type="password" class="form-control" />
+            </div>
+
+            <button @onclick="HandleRegister" class="btn btn-success w-100">Kayıt Ol</button>
+            
+            @if (!string.IsNullOrEmpty(msg))
+            {
+                <div class="alert alert-info mt-3">@msg</div>
+            }
+
+            <p class="text-center mt-3">
+                Zaten üye misiniz? <a href="/login">Giriş Yap</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserRegisterDto model = new();
+    private string msg = "";
+
+    private async Task HandleRegister()
+    {
+        msg = "";
+        try
+        {
+            var success = await AuthService.Register(model);
+            if (success)
+            {
+                ToastService.Notify("Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...", ToastLevel.Success);
+                await Task.Delay(1500);
+                Nav.NavigateTo("/login");
+            }
+            else
+            {
+                ToastService.Notify("Kayıt sırasında bir hata oluştu!", ToastLevel.Error);
+                msg = "Kayıt başarısız. Lütfen bilgilerinizi kontrol edin.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify($"Hata: {ex.Message}", ToastLevel.Error);
+        }
+    }
+}

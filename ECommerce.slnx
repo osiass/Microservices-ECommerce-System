@@ -1,19 +1,23 @@
 <Solution>
   <Folder Name="/BuildingBlocks/">
-    <Project Path="Common/Common.csproj" Id="c7e67666-0f23-4f08-955e-54aaa8b8ae88" />
+    <Project Path="Common/Common.csproj" />
   </Folder>
   <Folder Name="/Gateways/">
-    <Project Path="YarpGateway.API/YarpGateway.API.csproj" Id="c3d3c446-bff8-4229-9da8-055f0f46b6f2" />
+    <Project Path="YarpGateway.API/YarpGateway.API.csproj" />
   </Folder>
   <Folder Name="/Services/">
-    <Project Path="Basket.API/Basket.API.csproj" />
-    <Project Path="Discount.API/Discount.API.csproj" />
-    <Project Path="Identity.API/Identity.API.csproj" />
-    <Project Path="Order.API/Order.API.csproj" />
-    <Project Path="Services.Catalog/Catalog.API.csproj" />
+    <Project Path="Services/Basket.API/Basket.API.csproj" />
+    <Project Path="Services/Catalog.API/Catalog.API.csproj" />
+    <Project Path="Services/Discount.API/Discount.API.csproj" />
+    <Project Path="Services/Identity.API/Identity.API.csproj" />
+    <Project Path="Services/Inventory.API/Inventory.API.csproj" />
+    <Project Path="Services/Order.API/Order.API.csproj" />
+    <Project Path="Services/Payment.API/Payment.API.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="docker-compose.yml" />
   </Folder>
-  <Project Path="WebUI/WebUI.csproj" Id="edef7409-2146-4a91-8ac2-d29da4840de8" />
+  <Project Path="ECommerce.AppHost/ECommerce.AppHost.csproj" />
+  <Project Path="ECommerce.ServiceDefaults/ECommerce.ServiceDefaults.csproj" />
+  <Project Path="WebUI/WebUI.csproj" />
 </Solution>

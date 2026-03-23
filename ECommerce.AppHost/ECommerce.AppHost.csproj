@@ -1,0 +1,29 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.1.0">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>174c61a5-eb5c-4989-8656-9638ff943bcc</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Services\Basket.API\Basket.API.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\Services\Discount.API\Discount.API.csproj" />
+    <ProjectReference Include="..\ECommerce.ServiceDefaults\ECommerce.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Services\Identity.API\Identity.API.csproj" />
+    <ProjectReference Include="..\Services\Order.API\Order.API.csproj" />
+    <ProjectReference Include="..\Services\Catalog.API\Catalog.API.csproj" />
+    <ProjectReference Include="..\WebUI\WebUI.csproj" />
+    <ProjectReference Include="..\YarpGateway.API\YarpGateway.API.csproj" />
+    <ProjectReference Include="..\Services\Payment.API\Payment.API.csproj" />
+    <ProjectReference Include="..\Services\Inventory.API\Inventory.API.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.1.3" />
+  </ItemGroup>
+
+</Project>
