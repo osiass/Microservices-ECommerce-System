@@ -1,37 +1,29 @@
 @page "/order-success"
 @inject NavigationManager Nav
 
-<div class="container d-flex flex-column align-items-center justify-content-center" style="min-height: 80vh;">
-    <div class="text-center p-5 shadow-sm border-0" style="border-radius: 30px; background: white; max-width: 500px;">
-        <div class="mb-4">
-            <div class="display-1 text-success pulse">
-                <i class="bi bi-check-circle-fill"></i>
+<div class="container d-flex flex-column align-items-center justify-content-center animate-fade-in" style="min-height: 80vh;">
+    <div class="glass-card p-5 text-center animate-up" style="max-width: 600px; border-radius: 40px;">
+        <div class="mb-5">
+            <div class="success-icon-wrapper pulse shadow-glow mx-auto">
+                <i class="bi bi-check-lg"></i>
             </div>
         </div>
         
-        <h2 class="fw-bold mb-3">Siparişiniz Alındı! 🎉</h2>
-        <p class="text-muted mb-4 px-4">
+        <h1 class="display-5 fw-black mb-3 text-gradient">Siparişiniz Alındı! 🎉</h1>
+        <p class="text-muted mb-5 px-lg-4 fs-5">
             Harika bir seçim yaptınız. Siparişiniz başarıyla işleme alındı ve hazırlık aşamasına geçildi. Tüm detaylar e-posta adresinize gönderildi.
         </p>
 
-        <div class="d-grid gap-2">
-            <button class="btn btn-primary btn-lg py-3" style="border-radius: 15px;" @onclick='() => Nav.NavigateTo("/")'>
-                Alışverişe Devam Et
+        <div class="d-grid gap-3">
+            <button class="btn btn-primary btn-lg py-3 fw-bold rounded-4 shadow-glow" @onclick='() => Nav.NavigateTo("/")'>
+                Alışverişe Devam Et <i class="bi bi-arrow-right-short ms-1"></i>
             </button>
-            <button class="btn btn-outline-secondary py-3" style="border-radius: 15px;" @onclick='() => Nav.NavigateTo("/my-orders")'>
-                Siparişlerimi Gör
+            <button class="btn btn-outline-white-glass py-3 fw-bold rounded-4" @onclick='() => Nav.NavigateTo("/my-orders")'>
+                Siparişlerimi Takip Et
             </button>
+        </div>
+        <div class="mt-5 opacity-50">
+            <small>Bizi tercih ettiğiniz için teşekkürler.</small>
         </div>
     </div>
 </div>
-
-<style>
-    .pulse {
-        animation: pulse-animation 2s infinite;
-    }
-    @@keyframes pulse-animation {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-    }
-</style>

@@ -1,0 +1,258 @@
+@page "/admin/dashboard"
+@using Common.DTOs
+@using Microsoft.AspNetCore.Authorization
+@using WebUI.Services
+@inject CatalogService CatalogService
+@inject OrderService OrderService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStore
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Admin")]
+
+<div class="container-fluid mt-4 px-4 pb-5">
+    <div class="admin-header">
+        <div>
+            <h2 class="admin-title"><i class="bi bi-speedometer2 me-2 text-primary"></i> Yönetim Paneli</h2>
+            <div class="admin-subtitle text-white-50">Sistem genelindeki satış ve stok verilerini takip edin.</div>
+        </div>
+        <div class="text-white-50 small text-end">
+            <i class="bi bi-clock me-1"></i> Son Güncelleme: @DateTime.Now.ToString("HH:mm")
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <!-- Skeleton Özet Kartları -->
+        <div class="row g-4 mb-5">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="col-xl-3 col-md-6">
+                    <div class="skeleton skeleton-card" style="height: 120px;"></div>
+                </div>
+            }
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-8">
+                <div class="admin-card">
+                    <div class="skeleton skeleton-title mb-4"></div>
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <div class="skeleton skeleton-row"></div>
+                    }
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="admin-card">
+                    <div class="skeleton skeleton-title mb-4"></div>
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <div class="skeleton skeleton-row"></div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Özet Kartları -->
+        <div class="row g-4 mb-5">
+            <div class="col-xl-3 col-md-6">
+                <div class="admin-card h-100 position-relative overflow-hidden" style="border-left: 4px solid #6366f1 !important; min-height: 120px;">
+                    <div class="d-flex align-items-center position-relative h-100" style="z-index: 2; padding-right: 40px;">
+                        <div class="bg-primary bg-opacity-25 rounded-4 p-3 me-3">
+                            <i class="bi bi-currency-dollar fs-2 text-primary"></i>
+                        </div>
+                        <div>
+                            <div class="small text-white-50">Toplam Ciro</div>
+                            <div class="fs-3 fw-bold">@totalRevenue.ToString("C0")</div>
+                        </div>
+                    </div>
+                    <div class="position-absolute bottom-0 end-0 opacity-10" style="font-size: 4rem; transform: translate(10%, 10%); z-index: 1;">
+                        <i class="bi bi-graph-up text-primary"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="admin-card h-100 position-relative overflow-hidden" style="border-left: 4px solid #22c55e !important; min-height: 120px;">
+                    <div class="d-flex align-items-center position-relative h-100" style="z-index: 2; padding-right: 40px;">
+                        <div class="bg-success bg-opacity-25 rounded-4 p-3 me-3">
+                            <i class="bi bi-bag-check fs-2 text-success"></i>
+                        </div>
+                        <div>
+                            <div class="small text-white-50">Sipariş Sayısı</div>
+                            <div class="fs-3 fw-bold">@orders.Count</div>
+                        </div>
+                    </div>
+                    <div class="position-absolute bottom-0 end-0 opacity-10" style="font-size: 4rem; transform: translate(10%, 10%); z-index: 1;">
+                        <i class="bi bi-cart-check text-success"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="admin-card h-100 position-relative overflow-hidden" style="border-left: 4px solid #06b6d4 !important; min-height: 120px;">
+                    <div class="d-flex align-items-center position-relative h-100" style="z-index: 2; padding-right: 40px;">
+                        <div class="bg-info bg-opacity-25 rounded-4 p-3 me-3">
+                            <i class="bi bi-box-seam fs-2 text-info"></i>
+                        </div>
+                        <div>
+                            <div class="small text-white-50">Toplam Ürün</div>
+                            <div class="fs-3 fw-bold">@products.Count</div>
+                        </div>
+                    </div>
+                    <div class="position-absolute bottom-0 end-0 opacity-10" style="font-size: 4rem; transform: translate(10%, 10%); z-index: 1;">
+                        <i class="bi bi-box text-info"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="admin-card h-100 position-relative overflow-hidden" style="border-left: 4px solid #f59e0b !important; min-height: 120px;">
+                    <div class="d-flex align-items-center position-relative h-100" style="z-index: 2; padding-right: 40px;">
+                        <div class="bg-warning bg-opacity-25 rounded-4 p-3 me-3">
+                            <i class="bi bi-exclamation-triangle fs-2 text-warning"></i>
+                        </div>
+                        <div>
+                            <div class="small text-white-50">Kritik Stok (&lt;10)</div>
+                            <div class="fs-3 fw-bold">@lowStockCount</div>
+                        </div>
+                    </div>
+                    <div class="position-absolute bottom-0 end-0 opacity-10" style="font-size: 4rem; transform: translate(10%, 10%); z-index: 1;">
+                        <i class="bi bi-shield-exclamation text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Son Siparişler -->
+            <div class="col-md-8">
+                <div class="admin-card border-0">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i> Son Siparişler</h5>
+                        <a href="/admin/orders" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold">Tümünü Gör</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0 align-middle">
+                            <thead class="text-white-50 small text-uppercase">
+                                <tr class="border-bottom border-white border-opacity-10">
+                                    <th class="ps-0 py-3 border-0">Müşteri</th>
+                                    <th class="border-0">Durum</th>
+                                    <th class="border-0">Tarih</th>
+                                    <th class="border-0">Tutar</th>
+                                    <th class="text-end border-0 pe-0">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!orders.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-white-50">
+                                            <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+                                            Henüz sipariş bulunmuyor.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var order in orders.Take(5))
+                                    {
+                                        <tr class="border-bottom border-white border-opacity-5">
+                                            <td class="ps-0 py-3 fw-semibold">@order.UserName</td>
+                                            <td>
+                                                <span class="badge @order.Status.ToStatusClass() rounded-pill px-3 py-2" style="font-size: 0.7rem;">
+                                                    @order.Status.ToStatusText()
+                                                </span>
+                                            </td>
+                                            <td class="text-white-50 small">@order.CreatedDate.ToLocalTime().ToString("g")</td>
+                                            <td class="text-primary fw-bold">@order.TotalPrice.ToString("C")</td>
+                                            <td class="text-end pe-0">
+                                                <button class="btn btn-sm btn-primary bg-opacity-10 text-primary border-primary border-opacity-25 rounded-pill px-3" @onclick='() => NavigationManager.NavigateTo($"/order-detail/{order.Id}")'>
+                                                    Detay <i class="bi bi-chevron-right ms-1 small"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stok Durumu -->
+            <div class="col-md-4">
+                <div class="admin-card border-0 h-100">
+                    <h5 class="mb-4 fw-bold"><i class="bi bi-activity me-2 text-danger"></i> Kritik Ürünler</h5>
+                    @if (lowStockProducts.Any())
+                    {
+                        @foreach (var p in lowStockProducts.Take(6))
+                        {
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small fw-semibold text-white-50">@p.Name</span>
+                                    <span class="badge bg-danger bg-opacity-25 text-danger rounded-pill">@p.StockQuantity Adet</span>
+                                </div>
+                                <div class="progress bg-white bg-opacity-10" style="height: 8px; border-radius: 10px;">
+                                    <div class="progress-bar bg-danger shadow-sm" style="width: @(Math.Min(100, p.StockQuantity * 10))%; border-radius: 10px;"></div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-5 opacity-50 h-100 d-flex flex-column justify-content-center">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3 mx-auto">
+                                <i class="bi bi-shield-check fs-1 text-success"></i>
+                            </div>
+                            <p class="text-white-50 mb-0">Tüm stoklar yeterli düzeyde!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<OrderDto> orders = new();
+    private List<ProductDto> products = new();
+    private bool isLoading = true;
+    private decimal totalRevenue = 0;
+    private int lowStockCount = 0;
+    private List<ProductDto> lowStockProducts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try 
+        {
+            var token = await LocalStore.GetItemAsync<string>("authToken");
+            
+            // Paralel olarak verileri çekiyoruz
+            var ordersTask = OrderService.GetAllOrders(token ?? "");
+            var productsTask = CatalogService.GetProducts();
+
+            await Task.WhenAll(ordersTask, productsTask);
+
+            orders = await ordersTask ?? new();
+            products = await productsTask ?? new();
+
+            totalRevenue = orders.Sum(x => x.TotalPrice);
+            lowStockProducts = products.Where(p => p.StockQuantity < 10).OrderBy(p => p.StockQuantity).ToList();
+            lowStockCount = lowStockProducts.Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+

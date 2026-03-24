@@ -21,9 +21,9 @@ public static class CatalogContextSeed
         {
             context.Products.AddRange(new List<Product>
             {
-                new Product { Id = Guid.NewGuid(), Name = "Gaming Mouse", Category = "Mouse", Description = "RGB, 16000 DPI", Price = 500, Stock = 100 },
-                new Product { Id = Guid.NewGuid(), Name = "Mechanical Keyboard", Category = "Klavye", Description = "Blue Switch", Price = 1200, Stock = 50 },
-                new Product { Id = Guid.NewGuid(), Name = "Monitor", Category = "Monitör", Description = "144Hz, 1ms", Price = 4500, Stock = 20 }
+                new Product { Id = Guid.NewGuid(), Name = "Gaming Mouse", Category = "Mouse", Description = "RGB, 16000 DPI", Price = 500, StockQuantity = 100, ImageUrl = "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500" },
+                new Product { Id = Guid.NewGuid(), Name = "Mechanical Keyboard", Category = "Klavye", Description = "Blue Switch", Price = 1200, StockQuantity = 50, ImageUrl = "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=500" },
+                new Product { Id = Guid.NewGuid(), Name = "Monitor", Category = "Monitör", Description = "144Hz, 1ms", Price = 4500, StockQuantity = 20, ImageUrl = "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500" }
             });
 
             await context.SaveChangesAsync();

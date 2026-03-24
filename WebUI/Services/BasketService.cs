@@ -83,13 +83,14 @@ public class BasketService
             {
                 _httpClient.DefaultRequestHeaders.Authorization = null;
             }
-            var request = new AddItemRequest
+            var request = new AddItemRequestDto
             {
                 UserName = userName,
                 ProductId = product.Id.ToString(),
                 ProductName = product.Name,
                 Price = product.Price,
-                Quantity = 1
+                Quantity = 1,
+                ImageUrl = product.ImageUrl
             };
 
             var response = await _httpClient.PostAsJsonAsync("/basket/api/basket/add-item", request);

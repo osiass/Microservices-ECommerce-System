@@ -68,6 +68,7 @@ namespace Basket.API.Controllers
                             item.Price = realProduct.Price;
                         }
                         item.OriginalPrice = realProduct.Price;
+                        item.ImageUrl = realProduct.ImageUrl;
                     }
                 }
 
@@ -92,7 +93,7 @@ namespace Basket.API.Controllers
         }
 
         [HttpPost("add-item")]
-        public async Task<ActionResult> AddItem([FromBody] AddItemRequest request)
+        public async Task<ActionResult> AddItem([FromBody] AddItemRequestDto request)
         {
             if (request == null || string.IsNullOrEmpty(request.UserName))
             {
@@ -140,7 +141,8 @@ namespace Basket.API.Controllers
                         ProductName = request.ProductName,
                         Price = finalPrice,
                         OriginalPrice = request.Price,
-                        Quantity = request.Quantity
+                        Quantity = request.Quantity,
+                        ImageUrl = request.ImageUrl
                     });
                 }
 

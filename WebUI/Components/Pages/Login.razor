@@ -5,24 +5,50 @@
 @inject NavigationManager Nav
 @inject ILocalStorageService LocalStorage
 @inject ToastService ToastService
+@inject WebUI.Providers.CustomAuthStateProvider AuthProvider
 
-<div class="container mt-5 col-md-4">
-    <div class="card shadow">
-        <div class="card-body">
-            <h3>Giriş Yap</h3>
-            <div class="mb-3">
-                <label>Kullanıcı Adı</label>
-                <input @bind="username" class="form-control" />
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="col-md-5 col-lg-4">
+        <div class="admin-card border-0 p-4 p-md-5" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08) !important; backdrop-filter: blur(20px); border-radius: 30px;">
+            <div class="text-center mb-4">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-shield-lock text-primary fs-2"></i>
+                </div>
+                <h2 class="fw-bold text-white mb-1">Giriş Yap</h2>
+                <p class="text-white-50 opacity-75 small">Hesabınıza güvenle erişin</p>
             </div>
-            <div class="mb-3">
-                <label>Şifre</label>
-                <input @bind="password" type="password" class="form-control" />
+
+            <div class="mb-4">
+                <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">Kullanıcı Adı</label>
+                <div class="position-relative">
+                    <i class="bi bi-person position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
+                    <input @bind="username" class="form-control ps-5" placeholder="kullanıcı adınız" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
+                </div>
             </div>
-            <button @onclick="HandleLogin" class="btn btn-primary w-100">Giriş</button>
+
+            <div class="mb-4">
+                <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">Şifre</label>
+                <div class="position-relative">
+                    <i class="bi bi-key position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
+                    <input @bind="password" type="password" class="form-control ps-5" placeholder="••••••••" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
+                </div>
+            </div>
+
+            <button @onclick="HandleLogin" class="btn btn-primary w-100 py-3 fw-bold mb-4" style="border-radius: 12px; background: var(--primary-glow); border: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                Giriş Yap <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+
             @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <p class="text-danger mt-2">@errorMessage</p>
+                <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger small py-2 text-center" style="border-radius: 10px;">
+                    <i class="bi bi-exclamation-circle me-2"></i> @errorMessage
+                </div>
             }
+
+            <div class="text-center mt-4 border-top border-white border-opacity-10 pt-4">
+                <p class="text-white-50 small mb-0">Henüz hesabınız yok mu?</p>
+                <a href="/register" class="fw-bold text-primary mt-2 d-inline-block">Yeni Hesap Oluştur</a>
+            </div>
         </div>
     </div>
 </div>
@@ -37,15 +63,18 @@
         errorMessage = ""; 
         try 
         {
-            var token = await AuthService.Login(username, password);
+            var result = await AuthService.Login(username, password);
 
-            if (token != null)
+            if (result.Token != null)
             {
-                // Token'ı tarayıcıya güvenli bir şekilde kaydediyoruz
-                await LocalStorage.SetItemAsync("authToken", token);
+                //token tarayıcıya kaydediyoruz
+                await LocalStorage.SetItemAsync("authToken", result.Token);
                 await LocalStorage.SetItemAsync("userName", username);
+                await LocalStorage.SetItemAsync("userRole", result.Role);
+                
+                AuthProvider.NotifyUserLogin(username, result.Role);
                 ToastService.Notify("Giriş başarılı! Hoş geldiniz.", ToastLevel.Success);
-                Nav.NavigateTo("/", forceLoad: true);
+                Nav.NavigateTo("/");
             }
             else
             {

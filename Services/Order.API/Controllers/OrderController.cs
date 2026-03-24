@@ -64,13 +64,15 @@ namespace Order.API.Controllers
                 AddressLine = o.AddressLine,
                 TotalPrice = o.TotalPrice,
                 CreatedDate = o.CreatedDate,
+                Status = o.Status,
                 OrderItems = o.OrderItems.Select(oi => new OrderItemDto
                 {
                     Id = oi.Id,
                     ProductId = oi.ProductId,
                     ProductName = oi.ProductName,
                     Price = oi.Price,
-                    Quantity = oi.Quantity
+                    Quantity = oi.Quantity,
+                    ImageUrl = oi.ImageUrl
                 }).ToList()
             }).ToList();
 
@@ -93,17 +95,74 @@ namespace Order.API.Controllers
                 AddressLine = order.AddressLine,
                 TotalPrice = order.TotalPrice,
                 CreatedDate = order.CreatedDate,
+                Status = order.Status,
                 OrderItems = order.OrderItems.Select(oi => new OrderItemDto
                 {
                     Id = oi.Id,
                     ProductId = oi.ProductId,
                     ProductName = oi.ProductName,
                     Price = oi.Price,
-                    Quantity = oi.Quantity
+                    Quantity = oi.Quantity,
+                    ImageUrl = oi.ImageUrl
                 }).ToList()
             };
 
             return Ok(orderDto);
+        }
+
+        [HttpGet("check-purchase/{userName}/{productId}")]
+        public async Task<ActionResult<bool>> CheckPurchase(string userName, string productId)
+        {
+            var cleanedUserName = userName?.Trim().ToLower() ?? string.Empty;
+            
+            var hasBought = await _context.Orders
+                .Include(o => o.OrderItems)
+                .AnyAsync(o => o.UserName == cleanedUserName && o.OrderItems.Any(oi => oi.ProductId == productId));
+
+            return Ok(hasBought);
+        }
+
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<OrderDto>>> GetAllOrders()
+        {
+            var orders = await _context.Orders
+                .Include(x => x.OrderItems)
+                .OrderByDescending(o => o.CreatedDate)
+                .ToListAsync();
+
+            var orderDtos = orders.Select(o => new OrderDto
+            {
+                Id = o.Id,
+                UserName = o.UserName,
+                AddressLine = o.AddressLine,
+                TotalPrice = o.TotalPrice,
+                CreatedDate = o.CreatedDate,
+                Status = o.Status,
+                OrderItems = o.OrderItems.Select(oi => new OrderItemDto
+                {
+                    Id = oi.Id,
+                    ProductId = oi.ProductId,
+                    ProductName = oi.ProductName,
+                    Price = oi.Price,
+                    Quantity = oi.Quantity,
+                    ImageUrl = oi.ImageUrl
+                }).ToList()
+            }).ToList();
+
+            return Ok(orderDtos);
+        }
+
+        [HttpPut("{id}/status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto updateDto)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null) return NotFound();
+
+            order.Status = updateDto.Status;
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
 
         [HttpPost("checkout")]
@@ -160,12 +219,14 @@ namespace Order.API.Controllers
                 AddressLine = checkoutData.AddressLine,
                 TotalPrice = paymentRequest.Amount,
                 CreatedDate = DateTime.UtcNow,
+                Status = OrderStatus.Pending,
                 OrderItems = checkoutData.Items.Select(item => new OrderItem
                 {
                     ProductId = item.ProductId,
                     ProductName = item.ProductName,
                     Price = item.Price,
                     Quantity = item.Quantity,
+                    ImageUrl = item.ImageUrl
                 }).ToList()
             };
 

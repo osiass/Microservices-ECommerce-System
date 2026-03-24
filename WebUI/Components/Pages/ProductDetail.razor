@@ -3,89 +3,276 @@
 @using WebUI.Services
 @inject CatalogService CatalogService
 @inject BasketService BasketService
+@inject OrderService OrderService
 @inject Blazored.LocalStorage.ILocalStorageService LocalStore
 @inject NavigationManager NavigationManager
 @inject ToastService ToastService
 
 @if (product == null)
 {
-    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Yükleniyor...</span>
-        </div>
+    <div class="loader-fullscreen">
+        <div class="spinner-border text-primary shadow-glow" role="status"></div>
+        <p class="mt-3 text-muted">Ürün hazırlanıyor...</p>
     </div>
 }
 else
 {
-    <div class="container mt-5">
-        <div class="row">
-            <!-- Ürün Görseli -->
-            <div class="col-md-6 mb-4">
-                <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 20px;">
-                    <img src="https://picsum.photos/600/600?random=@product.Id" class="img-fluid" alt="@product.Name">
-                </div>
-            </div>
+    <div class="product-detail-page animate-fade-in">
+        <div class="container pt-4 pb-5">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb glass-breadcrumb px-3 py-2 rounded-pill">
+                    <li class="breadcrumb-item"><a href="/">Ana Sayfa</a></li>
+                    <li class="breadcrumb-item active text-white">@product.Name</li>
+                </ol>
+            </nav>
 
-            <!-- Ürün Detayları -->
-            <div class="col-md-6">
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="/">Ana Sayfa</a></li>
-                        <li class="breadcrumb-item active">Ürün Detayı</li>
-                    </ol>
-                </nav>
-
-                <h1 class="display-5 fw-bold mb-3">@product.Name</h1>
-                <div class="d-flex align-items-center mb-4">
-                    <span class="badge bg-primary me-2">Teknoloji</span>
-                    <span class="text-muted"><i class="bi bi-star-fill text-warning"></i> 4.8 (120 Değerlendirme)</span>
-                </div>
-
-                <h2 class="text-primary fw-bold mb-4">@product.Price.ToString("C")</h2>
-
-                <p class="text-secondary mb-4" style="line-height: 1.8;">
-                    @product.Description
-                </p>
-
-                <div class="d-grid gap-2">
-                    <button class="btn btn-primary btn-lg py-3" style="border-radius: 15px;" 
-                            @onclick="AddToCart" disabled="@isAdding">
-                        @if (isAdding)
+            <div class="row g-5">
+                <!-- Görsel ve Teknik Özellikler -->
+                <div class="col-lg-6">
+                    <div class="glass-card product-main-img-card overflow-hidden mb-4">
+                        @if (!string.IsNullOrEmpty(product.ImageUrl))
                         {
-                            <span class="spinner-border spinner-border-sm me-2"></span> <span>Ekleniyor...</span>
+                            <img src="@CatalogService.GetFullImageUrl(product.ImageUrl)" class="img-fluid w-100 detail-img" alt="@product.Name">
                         }
                         else
                         {
-                            <i class="bi bi-cart-plus-fill me-2"></i> <span>Sepete Ekle</span>
+                            <div class="detail-placeholder">
+                                <i class="bi bi-cpu-fill"></i>
+                            </div>
                         }
-                    </button>
-                    <button class="btn btn-outline-secondary btn-lg py-3" style="border-radius: 15px;" @onclick='@(() => NavigationManager.NavigateTo("/"))'>
-                        Alışverişe Devam Et
-                    </button>
+                    </div>
+
+                    @if (product.Features != null && product.Features.Any())
+                    {
+                        <div class="glass-card p-4 animate-up">
+                            <h5 class="fw-bold mb-3 text-gradient">Teknik Özellikler</h5>
+                            <div class="row g-3">
+                                @foreach (var feature in product.Features)
+                                {
+                                    <div class="col-md-6">
+                                        <div class="feature-item">
+                                            <i class="bi bi-chevron-right text-primary me-2"></i>
+                                            <span>@feature</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
 
-                <div class="mt-5 p-4 bg-light" style="border-radius: 20px;">
-                    <h5 class="fw-bold mb-3">Ürün Özellikleri</h5>
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Orijinal Ürün</li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> 2 Yıl Garanti</li>
-                        <li><i class="bi bi-check-circle-fill text-success me-2"></i> Ücretsiz Kargo</li>
-                    </ul>
+                <!--  Bilgiler, Fiyat, İşlemler -->
+                <div class="col-lg-6">
+                    <div class="product-info-sticky">
+                        <span class="badge category-badge-premium mb-3">@product.Category</span>
+                        <h1 class="display-5 fw-bold mb-3">@product.Name</h1>
+                        
+                        <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-white border-opacity-10">
+                            <div class="rating-box-premium me-3">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    var starIndex = i;
+                                    <i class="bi @(starIndex <= (hoverRating > 0 ? hoverRating : product.Rating) ? "bi-star-fill text-warning" : "bi-star text-muted") @(hasBought ? "cursor-pointer" : "") fs-5 me-1"
+                                       @onmouseover="() => { if(hasBought) hoverRating = starIndex; }"
+                                       @onmouseout="() => { if(hasBought) hoverRating = 0; }"
+                                       @onclick="() => { if(hasBought) RateProduct(starIndex); }"></i>
+                                }
+                            </div>
+                            <span class="text-muted small">@product.Rating.ToString("F1") (@product.ReviewCount Değerlendirme)</span>
+                        </div>
+
+                        <div class="price-section-premium mb-4">
+                            <small class="text-muted d-block mb-1">Peşin Fiyatına 9 Taksit</small>
+                            <h2 class="display-6 fw-bold text-gradient">@product.Price.ToString("C2")</h2>
+                        </div>
+
+                        <p class="product-description-premium mb-5">@product.Description</p>
+
+                        <div class="d-grid gap-3 mb-5">
+                            <button class="btn btn-primary btn-lg premium-action-btn" @onclick="AddToCart" disabled="@isAdding">
+                                @if (isAdding)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span> <span>Sepete Ekleniyor...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-cart-plus-fill me-2"></i> <span>Sepete Ekle</span>
+                                }
+                            </button>
+                            <button class="btn btn-outline-light btn-lg rounded-4 opacity-75" @onclick='@(() => NavigationManager.NavigateTo("/"))'>
+                                <i class="bi bi-arrow-left me-2"></i> Keşfe Devam Et
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-4">
+                                <div class="info-pill-glass">
+                                    <i class="bi bi-truck mb-2"></i>
+                                    <span>Hızlı Teslimat</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="info-pill-glass">
+                                    <i class="bi bi-shield-check mb-2"></i>
+                                    <span>2 Yıl Garanti</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="info-pill-glass">
+                                    <i class="bi bi-arrow-repeat mb-2"></i>
+                                    <span>Kolay İade</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="mt-5 pt-5 border-top border-white border-opacity-10">
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <div class="d-flex justify-content-between align-items-center mb-5">
+                            <h3 class="fw-bold mb-0">Müşteri Deneyimleri</h3>
+                            @if (hasBought)
+                            {
+                                <button class="btn btn-sm btn-outline-primary rounded-pill px-4" @onclick="() => showCommentForm = !showCommentForm">
+                                    @(showCommentForm ? "Vazgeç" : "Yorum Yap")
+                                </button>
+                            }
+                        </div>
+
+                        @if (showCommentForm && hasBought)
+                        {
+                            <div class="glass-card p-4 mb-5 animate-up">
+                                <h6 class="fw-bold mb-3 small">Yorumunuzu Paylaşın (@userName)</h6>
+                                <textarea @bind="newComment.Content" class="form-control glass-input mb-3" rows="3" placeholder="Ürün beklentilerinizi karşıladı mı?"></textarea>
+                                <div class="text-end">
+                                    <button class="btn btn-primary btn-sm px-5" @onclick="SubmitComment" disabled="@isSubmittingComment">
+                                        @if(isSubmittingComment) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                        Gönder
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        @if (comments == null)
+                        {
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary spinner-border-sm"></div>
+                            </div>
+                        }
+                        else if (!comments.Any())
+                        {
+                            <div class="text-center py-5 glass-card opacity-50">
+                                <i class="bi bi-chat-dots mb-3 d-block fs-1"></i>
+                                <p class="mb-0">Henüz yorum yapılmamış.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="comment-list d-flex flex-column gap-3">
+                                @foreach (var comment in comments)
+                                {
+                                    <div class="glass-card p-4 comment-item-premium">
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar-comment me-3">@comment.UserName[0].ToString().ToUpper()</div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">@comment.UserName</h6>
+                                                    <small class="text-muted">Doğrulanmış Alıcı</small>
+                                                </div>
+                                            </div>
+                                            <span class="text-muted small">@comment.CreatedDate.ToLocalTime().ToString("dd MMM yyyy")</span>
+                                        </div>
+                                        <p class="mb-0 text-white text-opacity-75">@comment.Content</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 }
+
+
 
 @code {
     [Parameter] public string Id { get; set; } = string.Empty;
     private ProductDto? product;
     private bool isAdding = false;
+    private int hoverRating = 0;
+    private List<CommentDto> comments;
+    private CommentDto newComment = new();
+    private bool isSubmittingComment = false;
+    private string userName = "";
+    private bool hasBought = false;
+    private bool showCommentForm = false;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadProduct();
+        await CheckUserStatus();
+    }
 
-        product = await CatalogService.GetProductById(Id);  
+    private async Task CheckUserStatus()
+    {
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        userName = await LocalStore.GetItemAsync<string>("userName") ?? "";
+
+        if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(userName))
+        {
+            hasBought = await OrderService.CheckPurchase(token, userName, Id);
+            newComment.UserName = userName; // İsmi otomatik set et
+        }
+    }
+
+    private async Task LoadProduct()
+    {
+        product = await CatalogService.GetProductById(Id);
+        if (product != null)
+        {
+            comments = await CatalogService.GetComments(Id);
+        }
+    }
+
+    private async Task RateProduct(int score)
+    {
+        if (!hasBought)
+        {
+            ToastService.Notify("Puan vermek için ürünü satın almalısınız.", ToastLevel.Warning);
+            return;
+        }
+
+        var result = await CatalogService.RateProduct(Id, score);
+        if (result != null)
+        {
+            product.Rating = result.Rating;
+            product.ReviewCount = result.ReviewCount;
+            ToastService.Notify($"{score} yıldız verdiniz!", ToastLevel.Success);
+        }
+    }
+
+    private async Task SubmitComment()
+    {
+        if (string.IsNullOrWhiteSpace(newComment.Content))
+        {
+            ToastService.Notify("Lütfen yorumunuzu yazın.", ToastLevel.Warning);
+            return;
+        }
+
+        isSubmittingComment = true;
+        var success = await CatalogService.AddComment(Id, newComment);
+        if (success)
+        {
+            newComment = new() { UserName = userName };
+            comments = await CatalogService.GetComments(Id);
+            ToastService.Notify("Yorumunuz eklendi.", ToastLevel.Success);
+        }
+        isSubmittingComment = false;
     }
 
     private async Task AddToCart()
@@ -97,7 +284,6 @@ else
 
         if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(user))
         {
-            // Misafir kullanıcı için bir ID oluştur veya mevcut olanı al
             user = await LocalStore.GetItemAsync<string>("guestId");
             if (string.IsNullOrEmpty(user))
             {

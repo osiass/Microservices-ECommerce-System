@@ -1,6 +1,29 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <LayoutView Layout="@typeof(Layout.MainLayout)">
+                        <div class="container text-center py-5">
+                            <h2 class="text-danger">Yetkisiz Erişim!</h2>
+                            <p class="text-white-50">Bu sayfayı görüntülemek için yeterli yetkiniz yok.</p>
+                            <a href="/login" class="btn btn-primary">Giriş Yap</a>
+                        </div>
+                    </LayoutView>
+                </NotAuthorized>
+                <Authorizing>
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary"></div>
+                        <p class="mt-2 text-white-50">Yetki Kontrol Ediliyor...</p>
+                    </div>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(Layout.MainLayout)">
+                <p>Üzgünüz, aradığınız sayfa bulunamadı.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

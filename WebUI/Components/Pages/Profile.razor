@@ -1,0 +1,143 @@
+@page "/profile"
+@using WebUI.Services
+@using Common.DTOs
+@inject AuthService AuthService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStore
+@inject NavigationManager Nav
+@inject ToastService ToastService
+
+<div class="profile-container animate-fade-in">
+    <div class="glass-card">
+        <div class="profile-header">
+            <div class="avatar-circle">
+                <span>@userProfile?.UserName?.Substring(0, 1).ToUpper()</span>
+            </div>
+            <h2 class="profile-name">@userProfile?.UserName</h2>
+            <span class="profile-role">@userProfile?.Role</span>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loader-container">
+                <div class="spinner"></div>
+                <p>Profil bilgileriniz yükleniyor...</p>
+            </div>
+        }
+        else
+        {
+            <div class="profile-sections">
+                <!-- Hesap Bilgileri -->
+                <div class="profile-section">
+                    <h4 class="section-title"><i class="bi bi-person-fill me-2"></i>Hesap Bilgileri</h4>
+                    <div class="form-group mb-3">
+                        <label>E-posta Adresi</label>
+                        <input type="email" class="form-control glass-input" @bind="updateDto.Email" placeholder="E-posta adresiniz" />
+                    </div>
+                    <button class="btn btn-premium w-100" @onclick="HandleUpdateProfile" disabled="@isSaving">
+                        @if (isSaving) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        Bilgileri Güncelle
+                    </button>
+                </div>
+
+                <hr class="glass-hr" />
+
+                <!-- Şifre Değiştirme -->
+                <div class="profile-section">
+                    <h4 class="section-title"><i class="bi bi-shield-lock-fill me-2"></i>Güvenlik</h4>
+                    <div class="form-group mb-3">
+                        <label>Yeni Şifre</label>
+                        <input type="password" class="form-control glass-input" @bind="updateDto.NewPassword" placeholder="Boş bırakırsanız değişmez" />
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>Yeni Şifre (Tekrar)</label>
+                        <input type="password" class="form-control glass-input" @bind="confirmPassword" placeholder="Şifreyi onaylayın" />
+                    </div>
+                    <button class="btn btn-outline-premium w-100" @onclick="HandleUpdatePassword" disabled="@isSaving">
+                        Şifreyi Değiştir
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+
+@code {
+    private UserProfileDto? userProfile;
+    private UpdateProfileDto updateDto = new();
+    private string confirmPassword = "";
+    private bool isLoading = true;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userName = await LocalStore.GetItemAsync<string>("userName");
+        if (string.IsNullOrEmpty(userName))
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        userProfile = await AuthService.GetProfile(userName);
+        if (userProfile != null)
+        {
+            updateDto.Email = userProfile.Email;
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleUpdateProfile()
+    {
+        if (userProfile == null) return;
+        
+        isSaving = true;
+        var success = await AuthService.UpdateProfile(userProfile.UserName, new UpdateProfileDto { Email = updateDto.Email });
+        
+        if (success)
+        {
+            ToastService.Notify("Profil başarıyla güncellendi!", ToastLevel.Success);
+        }
+        else
+        {
+            ToastService.Notify("Güncelleme sırasında bir hata oluştu.", ToastLevel.Error);
+        }
+        isSaving = false;
+    }
+
+    private async Task HandleUpdatePassword()
+    {
+        if (userProfile == null) return;
+        
+        if (string.IsNullOrWhiteSpace(updateDto.NewPassword))
+        {
+            ToastService.Notify("Lütfen yeni bir şifre girin.", ToastLevel.Warning);
+            return;
+        }
+
+        if (updateDto.NewPassword != confirmPassword)
+        {
+            ToastService.Notify("Şifreler uyuşmuyor!", ToastLevel.Error);
+            return;
+        }
+
+        isSaving = true;
+        var success = await AuthService.UpdateProfile(userProfile.UserName, new UpdateProfileDto 
+        { 
+            Email = updateDto.Email,
+            NewPassword = updateDto.NewPassword 
+        });
+
+        if (success)
+        {
+            ToastService.Notify("Şifreniz başarıyla güncellendi!", ToastLevel.Success);
+            updateDto.NewPassword = "";
+            confirmPassword = "";
+        }
+        else
+        {
+            ToastService.Notify("Şifre güncellenirken bir hata oluştu.", ToastLevel.Error);
+        }
+        isSaving = false;
+    }
+}

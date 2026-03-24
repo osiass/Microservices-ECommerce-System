@@ -2,73 +2,185 @@
 @inject ILocalStorageService LocalStore
 @inject NavigationManager Nav
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-lg py-3 sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold fs-3" href="">
-            <i class="bi bi-cart4 text-primary me-2"></i>E-Ticaret
+<nav class="navbar navbar-expand-lg premium-nav sticky-top">
+    <div class="container py-2">
+        <a class="navbar-brand premium-logo" href="">
+            <i class="bi bi-rocket-takeoff-fill me-2 glow-icon"></i><span>E-Ticaret</span>
         </a>
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
+        
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <i class="bi bi-list text-white fs-2"></i>
         </button>
+
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
                 <li class="nav-item">
-                    <NavLink class="nav-link px-3" href="" Match="NavLinkMatch.All">
-                        Ana Sayfa
-                    </NavLink>
+                    <NavLink class="nav-link premium-link" href="" Match="NavLinkMatch.All">Ana Sayfa</NavLink>
                 </li>
             </ul>
             
-            <div class="d-flex align-items-center gap-3">
-                <NavLink class="nav-link text-light px-2 position-relative" href="basket">
-                    <i class="bi bi-cart-fill fs-5"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
-                        !
-                    </span>
+            <div class="d-flex align-items-center gap-4">
+                <NavLink class="basket-link position-relative" href="basket">
+                    <i class="bi bi-handbag-fill fs-4"></i>
+                    <span class="basket-badge">!</span>
                 </NavLink>
 
-                @if (string.IsNullOrEmpty(token))
-                {
-                    <NavLink class="btn btn-outline-light px-4" href="login">Giriş Yap</NavLink>
-                    <NavLink class="btn btn-primary px-4" href="register">Kayıt Ol</NavLink>
-                }
-                else
-                {
-                    <div class="dropdown">
-                        <button class="btn btn-dark dropdown-toggle px-3" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle me-2"></i>@userName
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-                            <li><NavLink class="dropdown-item" href="my-orders"><i class="bi bi-clock-history me-2"></i>Siparişlerim</NavLink></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" @onclick="Logout" href="javascript:void(0)"><i class="bi bi-box-arrow-right me-2"></i>Çıkış Yap</a></li>
-                        </ul>
-                    </div>
-                }
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="dropdown">
+                            <button class="btn user-btn dropdown-toggle px-3" type="button" data-bs-toggle="dropdown">
+                                <div class="user-avatar-sm me-2">@context.User.Identity?.Name?[0].ToString().ToUpper()</div>
+                                <span class="d-none d-sm-inline">@context.User.Identity?.Name</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end glass-dropdown animate-fade-in">
+                                <li><NavLink class="dropdown-item py-2" href="profile"><i class="bi bi-person-bounding-box me-3"></i>Profilim</NavLink></li>
+                                <li><NavLink class="dropdown-item py-2" href="my-orders"><i class="bi bi-clock-history me-3"></i>Siparişlerim</NavLink></li>
+                                
+                                <AuthorizeView Roles="Admin" Context="adminContext">
+                                    <li><hr class="dropdown-divider opacity-10"></li>
+                                    <li><h6 class="dropdown-header text-muted small text-uppercase">Yönetim</h6></li>
+                                    <li><NavLink class="dropdown-item py-2" href="admin/dashboard"><i class="bi bi-speedometer2 me-3 text-primary"></i>Dashboard</NavLink></li>
+                                    <li><NavLink class="dropdown-item py-2" href="admin/products"><i class="bi bi-box-seam me-3"></i>Ürünler</NavLink></li>
+                                    <li><NavLink class="dropdown-item py-2" href="admin/orders"><i class="bi bi-bag-check me-3"></i>Siparişler</NavLink></li>
+                                </AuthorizeView>
+
+                                <li><hr class="dropdown-divider opacity-10"></li>
+                                <li><a class="dropdown-item py-2 text-danger" @onclick="Logout" href="javascript:void(0)"><i class="bi bi-power me-3"></i>Çıkış</a></li>
+                            </ul>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <NavLink class="nav-link premium-link me-2" href="login">Giriş</NavLink>
+                        <NavLink class="btn btn-primary btn-sm px-4 shadow-sm" href="register" style="border-radius: 10px;">Kayıt Ol</NavLink>
+                    </NotAuthorized>
+                </AuthorizeView>
             </div>
         </div>
     </div>
 </nav>
 
-@code {
-    private string? token;
-    private string? userName;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            token = await LocalStore.GetItemAsync<string>("authToken");
-            userName = await LocalStore.GetItemAsync<string>("userName");
-            StateHasChanged();
-        }
+<style>
+    .premium-nav {
+        background: rgba(10, 11, 16, 0.7) !important;
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        transition: var(--transition-smooth);
+        z-index: 1050;
     }
+
+    .premium-logo {
+        font-weight: 800;
+        font-size: 1.6rem;
+        letter-spacing: -0.5px;
+        color: white !important;
+        display: flex;
+        align-items: center;
+    }
+
+    .glow-icon {
+        color: var(--primary-glow);
+        filter: drop-shadow(0 0 8px var(--primary-glow));
+    }
+
+    .premium-link {
+        color: var(--text-muted) !important;
+        font-weight: 500;
+        padding: 0.5rem 1rem !important;
+        transition: var(--transition-smooth);
+    }
+
+    .premium-link:hover, .premium-link.active {
+        color: white !important;
+        transform: translateY(-1px);
+    }
+
+    .basket-link {
+        color: var(--text-muted);
+        transition: var(--transition-smooth);
+    }
+
+    .basket-link:hover {
+        color: var(--primary-glow);
+        transform: scale(1.1);
+    }
+
+    .basket-badge {
+        position: absolute;
+        top: -5px;
+        right: -10px;
+        background: var(--secondary-glow);
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 700;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    }
+
+    .user-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 30px;
+        display: flex;
+        align-items: center;
+        padding: 4px 12px 4px 6px !important;
+        transition: var(--transition-smooth);
+    }
+
+    .user-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--primary-glow);
+    }
+
+    .user-avatar-sm {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--primary-glow), var(--secondary-glow));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.8rem;
+    }
+
+    .glass-dropdown {
+        background: rgba(15, 16, 25, 0.95) !important;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 8px;
+        margin-top: 10px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .dropdown-item {
+        border-radius: 10px;
+        transition: var(--transition-smooth);
+    }
+
+    .dropdown-item:hover {
+        background: rgba(99, 102, 241, 0.2) !important;
+        color: var(--primary-glow) !important;
+    }
+</style>
+
+@code {
+    [Inject] private WebUI.Providers.CustomAuthStateProvider AuthProvider { get; set; } = default!;
 
     private async Task Logout()
     {
         await LocalStore.RemoveItemAsync("authToken");
         await LocalStore.RemoveItemAsync("userName");
-        Nav.NavigateTo("/", forceLoad: true);
+        await LocalStore.RemoveItemAsync("userRole");
+        AuthProvider.NotifyUserLogout();
+        Nav.NavigateTo("/");
     }
 }
 

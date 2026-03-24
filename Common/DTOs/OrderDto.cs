@@ -7,5 +7,6 @@ public class OrderDto
     public string AddressLine { get; set; } = string.Empty;
     public decimal TotalPrice { get; set; }
     public DateTime CreatedDate { get; set; }
+    public OrderStatus Status { get; set; }
     public List<OrderItemDto> OrderItems { get; set; } = new();
 }

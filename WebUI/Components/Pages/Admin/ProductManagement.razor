@@ -1,0 +1,339 @@
+@page "/admin/products"
+@using WebUI.Services
+@using Common.DTOs
+@using Blazored.LocalStorage
+@inject CatalogService CatalogService
+@inject ILocalStorageService LocalStore
+@inject NavigationManager Nav
+@inject ToastService ToastService
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+
+<div class="container-fluid py-4 px-4 pb-5">
+    <div class="admin-header">
+        <div>
+            <h2 class="admin-title"><i class="bi bi-box-seam me-2 text-primary"></i> Ürün Yönetimi</h2>
+            <p class="admin-subtitle text-white-50">Katalogdaki ürünleri ekleyin, silin veya güncelleyin.</p>
+        </div>
+        <button class="btn btn-primary shadow-sm px-4 rounded-pill fw-bold" @onclick="ShowAddModal">
+            <i class="bi bi-plus-lg me-2"></i>Yeni Ürün Ekle
+        </button>
+    </div>
+
+    <!-- Ürün Listesi Tablosu -->
+    <div class="admin-card border-0 p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead class="text-white-50 small text-uppercase" style="background: rgba(255,255,255,0.02);">
+                    <tr>
+                        <th class="px-4 py-3 border-0">Ürün Bilgisi</th>
+                        <th class="py-3 border-0">Kategori</th>
+                        <th class="py-3 border-0 text-center">Stok</th>
+                        <th class="py-3 border-0">Fiyat</th>
+                        <th class="py-3 text-end px-4 border-0">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (isLoading)
+                    {
+                        @for (int i = 0; i < 5; i++)
+                        {
+                            <tr>
+                                <td colspan="5" class="p-0">
+                                    <div class="skeleton skeleton-row m-0 w-100" style="border-radius: 0; opacity: 0.5;"></div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else if (products == null || !products.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-white-50">
+                                <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+                                Hiç ürün bulunamadı.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in products)
+                        {
+                            <tr class="border-bottom border-white border-opacity-5">
+                                <td class="px-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-3 bg-white bg-opacity-10 p-1 me-3 d-flex align-items-center justify-content-center overflow-hidden border border-white border-opacity-10" style="width: 52px; height: 52px;">
+                                            @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                            {
+                                                <img src="@CatalogService.GetFullImageUrl(item.ImageUrl)" class="w-100 h-100 object-fit-cover rounded-2" />
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-box-seam text-primary fs-4"></i>
+                                            }
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">@item.Name</div>
+                                            <div class="text-white-50 smaller">ID: @item.Id.ToString().Substring(0, 8)...</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 rounded-pill px-3 py-2">
+                                        @item.Category
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge @(item.StockQuantity < 10 ? "bg-danger" : "bg-success") bg-opacity-10 @(item.StockQuantity < 10 ? "text-danger" : "text-success") rounded-pill px-3 py-2">
+                                        @item.StockQuantity Adet
+                                    </span>
+                                </td>
+                                <td class="fw-bold text-primary">@item.Price.ToString("C")</td>
+                                <td class="text-end px-4">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button class="btn btn-sm btn-white btn-opacity-10 rounded-pill border-0" 
+                                                @onclick="() => ShowEditModal(item)" title="Düzenle">
+                                            <i class="bi bi-pencil text-primary"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-white btn-opacity-10 rounded-pill border-0" 
+                                                @onclick="() => ConfirmDelete(item.Id)" title="Sil">
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!--Ekleme/Düzenleme Formu  -->
+@if (showModal)
+{
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1050;">
+        <div class="admin-modal rounded-4 p-4 overflow-auto border-0 shadow-2xl" style="width: 500px; max-height: 90vh;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0">@(isEditMode ? "Ürünü Düzenle" : "Yeni Ürün Ekle")</h4>
+                <button class="btn-close btn-close-white" @onclick="HideModal"></button>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label small">Ürün Adı</label>
+                <input @bind="newProduct.Name" class="form-control shadow-none" placeholder="Örn: Mechanical Keyboard" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label small">Ürün Resmi</label>
+                <div class="p-3 rounded-4 mb-2 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1);">
+                    @if (!string.IsNullOrEmpty(uploadPreview))
+                    {
+                        <img src="@uploadPreview" class="rounded-3 shadow-lg" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);" />
+                    }
+                    else
+                    {
+                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                            <i class="bi bi-image text-white-50 fs-2"></i>
+                        </div>
+                    }
+                    <div class="flex-grow-1">
+                        <InputFile OnChange="HandleFileSelected" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.webp" />
+                        <div class="small text-white-50 mt-1">PNG, JPG veya WebP (Max 5MB)</div>
+                    </div>
+                </div>
+                @if (isUploading)
+                {
+                    <div class="progress mt-2" style="height: 6px; border-radius: 10px; background: rgba(255,255,255,0.05);">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 100%; border-radius: 10px;"></div>
+                    </div>
+                }
+            </div>
+            <div class="mb-3">
+                <label class="form-label small">Kategori</label>
+                <input @bind="newProduct.Category" class="form-control shadow-none" placeholder="Örn: Donanım" />
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label small">Puan (0-5)</label>
+                    <input @bind="newProduct.Rating" type="number" step="0.1" class="form-control shadow-none" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label small">Değerlendirme</label>
+                    <input @bind="newProduct.ReviewCount" type="number" class="form-control shadow-none" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small">Özellikler (Satır başı bir tane)</label>
+                <textarea @bind="featuresText" class="form-control shadow-none" rows="3" placeholder="Örn: RGB Aydınlatma&#10;Blue Switch"></textarea>
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <label class="form-label small">Fiyat (₺)</label>
+                    <input @bind="newProduct.Price" type="number" class="form-control shadow-none fw-bold text-primary" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label small">Stok Adedi</label>
+                    <input @bind="newProduct.StockQuantity" type="number" class="form-control shadow-none fw-bold" />
+                </div>
+            </div>
+
+            <div class="d-flex gap-3">
+                <button class="btn btn-light w-100 py-2 rounded-3 fw-bold border-0" @onclick="HideModal">Vazgeç</button>
+                <button class="btn btn-primary w-100 py-2 rounded-3 fw-bold shadow-lg" @onclick="HandleAddProduct" disabled="@(isProcessing || isUploading)">
+                    @if(isProcessing || isUploading) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                    Değişiklikleri Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProductDto>? products;
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private bool isProcessing = false;
+    private bool isUploading = false;
+    private string? uploadPreview;
+    private string? featuresText;
+    private IBrowserFile? selectedFile;
+    private ProductDto newProduct = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Sayfa açıldığında ürünleri listelemek için servisi çağır
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        try 
+        {
+            products = await CatalogService.GetProducts();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowAddModal() 
+    { 
+        newProduct = new(); // Formu sıfırla
+        uploadPreview = null;
+        featuresText = "";
+        selectedFile = null;
+        isEditMode = false;
+        showModal = true; 
+    }
+
+    private void ShowEditModal(ProductDto product)
+    {
+        newProduct = new ProductDto 
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Category = product.Category,
+            Description = product.Description,
+            Price = product.Price,
+            StockQuantity = product.StockQuantity,
+            ImageUrl = product.ImageUrl,
+            Rating = product.Rating,
+            ReviewCount = product.ReviewCount,
+            Features = new List<string>(product.Features)
+        };
+        uploadPreview = CatalogService.GetFullImageUrl(product.ImageUrl);
+        featuresText = string.Join("\n", product.Features);
+        selectedFile = null;
+        isEditMode = true;
+        showModal = true;
+    }
+    
+    private void HideModal() => showModal = false;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        // Önizleme oluştur
+        var format = selectedFile.ContentType;
+        var imageFile = await selectedFile.RequestImageFileAsync(format, 400, 400);
+        var buffer = new byte[imageFile.Size];
+        await imageFile.OpenReadStream().ReadAsync(buffer);
+        uploadPreview = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private async Task HandleAddProduct()
+    {
+        if (string.IsNullOrWhiteSpace(newProduct.Name)) return;
+
+        isProcessing = true;
+        
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        
+        if(!string.IsNullOrEmpty(token))
+        {
+            // Eğer dosya seçilmişse önce onu yükle
+            if (selectedFile != null)
+            {
+                isUploading = true;
+                using var stream = selectedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                var imageUrl = await CatalogService.UploadImage(token, stream, selectedFile.Name);
+                
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    newProduct.ImageUrl = imageUrl;
+                }
+                isUploading = false;
+            }
+
+            // Özellikleri metin alanından ayıkla
+            newProduct.Features = featuresText?.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                              .Select(x => x.Trim())
+                                              .ToList() ?? new();
+
+            bool success;
+            if (isEditMode)
+            {
+                success = await CatalogService.UpdateProduct(token, newProduct);
+            }
+            else
+            {
+                success = await CatalogService.CreateProduct(token, newProduct);
+            }
+
+            if(success)
+            {
+                await LoadProducts(); // Listeyi güncelle
+                showModal = false;    // Formu kapat
+                ToastService.Notify(isEditMode ? "Ürün güncellendi." : "Ürün başarıyla eklendi.", ToastLevel.Success);
+            }
+            else
+            {
+                ToastService.Notify("Ürün eklenemedi (Yetki hatası olabilir).", ToastLevel.Error);
+            }
+        }
+        
+        isProcessing = false;
+    }
+
+    private async Task ConfirmDelete(Guid id)
+    {
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        
+        if(!string.IsNullOrEmpty(token))
+        {
+            var success = await CatalogService.DeleteProduct(token, id.ToString());
+            if(success)
+            {
+                await LoadProducts();
+                ToastService.Notify("Ürün başarıyla silindi.", ToastLevel.Success);
+            }
+            else
+            {
+                ToastService.Notify("Ürün silinemedi.", ToastLevel.Error);
+            }
+        }
+    }
+}

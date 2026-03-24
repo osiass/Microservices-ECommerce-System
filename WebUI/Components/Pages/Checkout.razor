@@ -7,93 +7,94 @@
 @inject ILocalStorageService LocalStore
 @inject NavigationManager Nav
 
-<div class="container py-5">
+<div class="container pt-5 pb-5 animate-fade-in">
     <div class="row justify-content-center">
         <div class="col-lg-6 col-md-8">
-            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-                <div class="card-header bg-dark text-white p-4 text-center">
-                    <h3 class="mb-0 fw-bold">Ödeme ve Onay</h3>
-                    <p class="text-white-50 small mb-0">Güvenli ödeme altyapısı ile siparişinizi tamamlayın</p>
+            <div class="glass-card p-4 p-md-5 animate-up">
+                <div class="text-center mb-5">
+                    <div class="checkout-header-icon mb-3">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h2 class="fw-bold mb-2">Güvenli <span class="text-gradient">Ödeme</span></h2>
+                    <p class="text-muted small">Siparişinizi tamamlamadan önce son bir adım kaldı.</p>
                 </div>
-                <div class="card-body p-4 p-md-5 bg-light">
+
+                <!-- Adres Bölümü -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-uppercase opacity-50 mb-2">Teslimat Adresi</label>
+                    <div class="position-relative">
+                        <i class="bi bi-geo-alt position-absolute top-50 start-0 translate-middle-y ms-3 text-primary-glow"></i>
+                        <input @bind="address" class="form-control glass-input ps-5" placeholder="Sokak, No, Kat, Daire..." />
+                    </div>
+                </div>
+
+                <div class="border-top border-white border-opacity-10 my-5 pt-1"></div>
+
+                <!-- Kart Bilgileri -->
+                <div class="payment-section">
+                    <label class="form-label fw-bold small text-uppercase opacity-50 mb-3">Kart Bilgileri</label>
                     
-                    <!-- Adres Bölümü -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold text-secondary">Teslimat Adresi</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt"></i></span>
-                            <input @bind="address" class="form-control border-start-0 ps-0" placeholder="Açık adresinizi giriniz..." />
+                    <div class="mb-3">
+                        <label class="small text-muted mb-1">Kart Üzerindeki İsim</label>
+                        <input @bind="cardHolderName" class="form-control glass-input" placeholder="Ad Soyad" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small text-muted mb-1">Kart Numarası</label>
+                        <div class="position-relative">
+                            <input @bind="cardNumber" class="form-control glass-input" placeholder="0000 0000 0000 0000" maxlength="16" />
+                            <i class="bi bi-credit-card position-absolute top-50 end-0 translate-middle-y me-3 opacity-50"></i>
                         </div>
                     </div>
 
-                    <hr class="my-4 text-muted opacity-25">
-
-                    <!-- Kart Bilgileri -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold text-secondary">Kart Bilgileri</label>
-                        
-                        <div class="mb-3">
-                            <label class="small text-muted mb-1">Kart Üzerindeki İsim</label>
-                            <input @bind="cardHolderName" class="form-control form-control-lg" placeholder="Ad Soyad" />
+                    <div class="row g-3 mb-4">
+                        <div class="col-4">
+                            <label class="small text-muted mb-1">Ay</label>
+                            <input @bind="expMonth" class="form-control glass-input text-center" placeholder="AA" maxlength="2" />
                         </div>
-
-                        <div class="mb-3">
-                            <label class="small text-muted mb-1">Kart Numarası</label>
-                            <div class="input-group">
-                                <input @bind="cardNumber" class="form-control form-control-lg" placeholder="0000 0000 0000 0000" maxlength="16" />
-                                <span class="input-group-text bg-white"><i class="bi bi-credit-card"></i></span>
-                            </div>
+                        <div class="col-4">
+                            <label class="small text-muted mb-1">Yıl</label>
+                            <input @bind="expYear" class="form-control glass-input text-center" placeholder="YY" maxlength="2" />
                         </div>
-
-                        <div class="row g-3">
-                            <div class="col-4">
-                                <label class="small text-muted mb-1">Ay</label>
-                                <input @bind="expMonth" class="form-control" placeholder="AA" maxlength="2" />
-                            </div>
-                            <div class="col-4">
-                                <label class="small text-muted mb-1">Yıl</label>
-                                <input @bind="expYear" class="form-control" placeholder="YY" maxlength="2" />
-                            </div>
-                            <div class="col-4">
-                                <label class="small text-muted mb-1">CVV</label>
-                                <input @bind="cvv" type="password" class="form-control" placeholder="***" maxlength="3" />
-                            </div>
+                        <div class="col-4">
+                            <label class="small text-muted mb-1">CVV</label>
+                            <input @bind="cvv" type="password" class="form-control glass-input text-center" placeholder="***" maxlength="3" />
                         </div>
                     </div>
+                </div>
 
-                    @if (!string.IsNullOrEmpty(errorMessage))
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger-glass mb-4">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i>@errorMessage
+                    </div>
+                }
+
+                <button class="btn btn-primary btn-lg w-100 py-3 fw-bold rounded-4 shadow-glow mt-4" 
+                        @onclick="ConfirmOrder" disabled="@isProcessing">
+                    @if (isProcessing)
                     {
-                        <div class="alert alert-danger py-2 small mb-4">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-                        </div>
+                        <span class="spinner-border spinner-border-sm me-2"></span> <span>İşlem Sürüyor...</span>
                     }
-
-                    <button class="btn btn-dark btn-lg w-100 py-3 fw-bold shadow-sm mt-2 transition-transform hover-scale" 
-                            @onclick="ConfirmOrder" disabled="@isProcessing">
-                        @if (isProcessing)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2"></span> <span>İşleniyor...</span>
-                        }
-                        else
-                        {
-                            <span>Siparişi Tamamla</span>
-                        }
-                    </button>
-                    
-                    <p class="text-center text-muted small mt-4">
-                        <i class="bi bi-shield-lock-fill me-1 text-success"></i> 
-                        256-bit SSL ile şifrelenmiş güvenli ödeme.
-                    </p>
+                    else
+                    {
+                        <span>Ödemeyi Onayla ve Sipariş Ver</span> <i class="bi bi-check2-circle ms-2"></i>
+                    }
+                </button>
+                
+                <div class="text-center mt-5">
+                    <div class="d-flex justify-content-center gap-3 opacity-25 grayscale mb-3">
+                        <i class="bi bi-lock-fill"></i>
+                        <span>SSL SECURED</span>
+                    </div>
+                    <p class="text-muted extra-small">Kredi kartı bilgileriniz sunucularımızda saklanmaz, doğrudan banka altyapısına iletilir.</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .transition-transform { transition: transform 0.2s; }
-    .hover-scale:hover { transform: translateY(-2px); }
-</style>
+
 
 @code {
     private string address = "";

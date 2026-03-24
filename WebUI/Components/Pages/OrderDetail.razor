@@ -102,7 +102,11 @@
                     <p class="mb-3">@order.AddressLine</p>
                     
                     <p class="text-muted small mb-1 text-uppercase fw-bold">Sipariş Durumu</p>
-                    <p class="mb-0"><span class="badge bg-success-subtle text-success px-3 py-2" style="border-radius: 8px;">Hazırlanıyor</span></p>
+                    <p class="mb-0">
+                        <span class="badge @order.Status.ToStatusClass() px-3 py-2" style="border-radius: 8px;">
+                            @order.Status.ToStatusText()
+                        </span>
+                    </p>
                 </div>
             </div>
         </div>

@@ -9,7 +9,6 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Blazored LocalStorage - Blazor için en yaygın ve güvenilir kütüphanedir (27M+ indirme).
 builder.Services.AddBlazoredLocalStorage();
 
 builder.Services.AddScoped<AuthService>();
@@ -17,6 +16,15 @@ builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<BasketService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ToastService>();
+
+// Authentication & Authorization 
+builder.Services.AddAuthentication("Cookies")
+    .AddCookie("Cookies");
+builder.Services.AddAuthorizationCore();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, WebUI.Providers.CustomAuthStateProvider>();
+builder.Services.AddScoped<WebUI.Providers.CustomAuthStateProvider>(sp => (WebUI.Providers.CustomAuthStateProvider)sp.GetRequiredService<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider>());
+
 
 // API Gateway istemcisi - Aspire Service Discovery ile servis isminden adresi çözer
 builder.Services.AddHttpClient("GatewayClient", client =>

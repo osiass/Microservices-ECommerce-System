@@ -1,0 +1,17 @@
+.checkout-header-icon {
+    font-size: 3.5rem;
+    color: var(--primary-glow);
+    filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.4));
+}
+
+.alert-danger-glass {
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    padding: 1rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+}
+
+.extra-small { font-size: 0.75rem; }
+.grayscale { filter: grayscale(100%); }

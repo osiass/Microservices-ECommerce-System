@@ -98,5 +98,52 @@ namespace WebUI.Services
                 return $"Hata: {ex.Message}";
             }
         }
+        public async Task<List<OrderDto>> GetAllOrders(string token)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var orders = await _httpClient.GetFromJsonAsync<List<OrderDto>>("/order/api/order/all");
+                return orders ?? new List<OrderDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Tüm siparişleri getirme hatası: {ex.Message}");
+                return new List<OrderDto>();
+            }
+        }
+
+        public async Task<bool> UpdateOrderStatus(string token, int orderId, OrderStatus status)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var updateDto = new UpdateOrderStatusDto { Status = status };
+                var response = await _httpClient.PutAsJsonAsync($"/order/api/order/{orderId}/status", updateDto);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Sipariş durumu güncelleme hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> CheckPurchase(string token, string userName, string productId)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                }
+                return await _httpClient.GetFromJsonAsync<bool>($"/order/api/order/check-purchase/{userName}/{productId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Satın alma kontrol hatası: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
