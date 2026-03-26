@@ -3,6 +3,7 @@
 @using Common.DTOs
 @inject DiscountService DiscountService
 @inject ToastService ToastService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStore
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 
 <div class="container-fluid py-4 min-vh-100">
@@ -164,7 +165,8 @@
     {
         isLoading = true;
         try {
-            coupons = await DiscountService.GetCoupons();
+            var token = await LocalStore.GetItemAsync<string>("authToken");
+            coupons = await DiscountService.GetCoupons(token);
         } finally {
             isLoading = false;
         }
@@ -202,10 +204,11 @@
         }
 
         bool success;
+        var token = await LocalStore.GetItemAsync<string>("authToken");
         if (editingId == 0)
-            success = await DiscountService.CreateDiscount(currentCoupon);
+            success = await DiscountService.CreateDiscount(currentCoupon, token);
         else
-            success = await DiscountService.UpdateDiscount(editingId, currentCoupon);
+            success = await DiscountService.UpdateDiscount(editingId, currentCoupon, token);
 
         if (success)
         {
@@ -219,7 +222,8 @@
 
     private async Task DeleteCoupon(int id)
     {
-        if (await DiscountService.DeleteDiscount(id))
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        if (await DiscountService.DeleteDiscount(id, token))
         {
             ToastService.Notify("Kupon silindi.", ToastLevel.Success);
             await LoadCoupons();

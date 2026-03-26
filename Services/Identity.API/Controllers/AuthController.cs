@@ -27,22 +27,29 @@ namespace Identity.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult> Register([FromBody] UserRegisterDto registerDto)
         {
-            var exists = await _context.AppUsers.AnyAsync(u => u.UserName == registerDto.UserName.ToLower());
-            if (exists) return BadRequest("Bu kullanıcı adı zaten alınmış!");
-
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
-
-            var newUser = new AppUser
+            try
             {
-                UserName = registerDto.UserName.ToLower(),
-                Email = registerDto.Email,
-                Password = hashedPassword
-            };
+                var exists = await _context.AppUsers.AnyAsync(u => u.UserName == registerDto.UserName.ToLower());
+                if (exists) return BadRequest("Bu kullanıcı adı zaten alınmış!");
 
-            _context.AppUsers.Add(newUser);
-            await _context.SaveChangesAsync();
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
-            return Ok(new { message = "Kayıt başarılı! Şifreniz güvenli bir şekilde saklandı." });
+                var newUser = new AppUser
+                {
+                    UserName = registerDto.UserName.ToLower(),
+                    Email = registerDto.Email,
+                    Password = hashedPassword
+                };
+
+                _context.AppUsers.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Kayıt başarılı! Şifreniz güvenli bir şekilde saklandı." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Kayıt hatası: {ex.Message} {(ex.InnerException != null ? " | İç hata: " + ex.InnerException.Message : "")}");
+            }
         }
 
         [HttpPost("login")]

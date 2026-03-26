@@ -10,10 +10,13 @@ namespace WebUI.Services
             _httpClient = httpClientFactory.CreateClient("GatewayClient");
         }
 
-        public async Task<CouponDto?> GetDiscount(string code)
+        public async Task<CouponDto?> GetDiscount(string code, string? token = null)
         {
             try
             {
+                if (!string.IsNullOrEmpty(token))
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
                 var response = await _httpClient.GetAsync($"/discount/api/discount/{code}");
                 if (response.IsSuccessStatusCode)
                 {
@@ -27,10 +30,13 @@ namespace WebUI.Services
             }
         }
 
-        public async Task<List<CouponDto>> GetCoupons()
+        public async Task<List<CouponDto>> GetCoupons(string? token = null)
         {
             try
             {
+                if (!string.IsNullOrEmpty(token))
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
                 return await _httpClient.GetFromJsonAsync<List<CouponDto>>("/discount/api/discount") ?? new();
             }
             catch
@@ -39,20 +45,29 @@ namespace WebUI.Services
             }
         }
 
-        public async Task<bool> CreateDiscount(CouponDto coupon)
+        public async Task<bool> CreateDiscount(CouponDto coupon, string? token = null)
         {
+            if (!string.IsNullOrEmpty(token))
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
             var response = await _httpClient.PostAsJsonAsync("/discount/api/discount", coupon);
             return response.IsSuccessStatusCode;
         }
 
-        public async Task<bool> UpdateDiscount(int id, CouponDto coupon)
+        public async Task<bool> UpdateDiscount(int id, CouponDto coupon, string? token = null)
         {
+            if (!string.IsNullOrEmpty(token))
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
             var response = await _httpClient.PutAsJsonAsync($"/discount/api/discount/{id}", coupon);
             return response.IsSuccessStatusCode;
         }
 
-        public async Task<bool> DeleteDiscount(int id)
+        public async Task<bool> DeleteDiscount(int id, string? token = null)
         {
+            if (!string.IsNullOrEmpty(token))
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
             var response = await _httpClient.DeleteAsync($"/discount/api/discount/{id}");
             return response.IsSuccessStatusCode;
         }

@@ -1,9 +1,11 @@
 @page "/admin/inventory"
 @using WebUI.Services
 @using Common.DTOs
+@using Blazored.LocalStorage
 @inject InventoryService InventoryService
 @inject CatalogService CatalogService
 @inject ToastService ToastService
+@inject ILocalStorageService LocalStore
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 
 <div class="container-fluid py-4 min-vh-100">
@@ -13,8 +15,16 @@
             <p class="text-white-50 small mb-0">Ürün stok seviyelerini gerçek zamanlı izleyin ve yönetin</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary border-2 px-4 py-2" @onclick="LoadData" style="border-radius: 12px;">
-                <i class="bi bi-arrow-clockwise me-2"></i> Yenile
+            <button class="btn btn-outline-success border-2 px-4 py-2" @onclick="SyncData" disabled="@(isSyncing || isLoading)" style="border-radius: 12px;">
+                @if (isSyncing)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                else
+                {
+                    <i class="bi bi-arrow-repeat me-2"></i>
+                }
+                Stokları Senkronize Et
             </button>
         </div>
     </div>
@@ -40,6 +50,11 @@
             </div>
             <h4 class="text-white fw-bold">Stok Bilgisi Bulunamadı</h4>
             <p class="text-white-50 mx-auto" style="max-width: 400px;">Henüz hiçbir ürün için stok kaydı oluşturulmamış. Ürün ekledikçe stoklar burada görünecektir.</p>
+            <div class="d-flex justify-content-center mt-3">
+                <button class="btn btn-success px-4 border-0" @onclick="SyncData" style="border-radius: 10px;">
+                    Stokları Senkronize Et
+                </button>
+            </div>
         </div>
     }
     else
@@ -118,10 +133,57 @@
     private List<StockDto> stocks = new();
     private List<ProductDto> products = new();
     private bool isLoading = true;
+    private bool isSyncing = false;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+    }
+
+    private async Task SyncData()
+    {
+        if (products == null || !products.Any())
+        {
+            products = await CatalogService.GetProducts();
+        }
+
+        if (products == null || !products.Any())
+        {
+            ToastService.Notify("Katalogdan ürünler yüklenemedi. Lüten daha sonra tekrar deneyin.", ToastLevel.Warning);
+            return;
+        }
+
+        isSyncing = true;
+        try 
+        {
+            var token = await LocalStore.GetItemAsync<string>("authToken");
+            var seedData = products.Select(p => new StockDto 
+            { 
+                ProductId = p.Id.ToString(), 
+                ProductName = p.Name, 
+                Quantity = p.StockQuantity 
+            }).ToList();
+
+            var success = await InventoryService.SeedStocks(token, seedData);
+            if (success)
+            {
+                ToastService.Notify("Stoklar başarıyla senkronize edildi.", ToastLevel.Success);
+                await LoadData();
+            }
+            else
+            {
+                ToastService.Notify("Senkronizasyon sırasında bir hata oluştu.", ToastLevel.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Inventory] Sync hatası: {ex.Message}");
+            ToastService.Notify("Sistemsel bir hata oluştu.", ToastLevel.Error);
+        }
+        finally 
+        {
+            isSyncing = false;
+        }
     }
 
     private async Task LoadData()
@@ -129,15 +191,29 @@
         isLoading = true;
         try 
         {
+            var token = await LocalStore.GetItemAsync<string>("authToken");
+            
             // İki veriyi paralel çek
-            var stocksTask = InventoryService.GetStocks();
+            var stocksTask = InventoryService.GetStocks(token);
             var productsTask = CatalogService.GetProducts();
             
             await Task.WhenAll(stocksTask, productsTask);
             
             stocks = await stocksTask;
             products = await productsTask;
+
+            Console.WriteLine($"[Inventory] Yüklenen: {stocks?.Count ?? 0} stok, {products?.Count ?? 0} ürün");
+
+            if (stocks == null || !stocks.Any())
+            {
+                 Console.WriteLine("[Inventory] Stok verisi boş geldi.");
+            }
         } 
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Inventory] Yükleme hatası: {ex.Message}");
+            ToastService.Notify("Stok bilgileri yüklenirken bir sorun oluştu.", ToastLevel.Error);
+        }
         finally 
         {
             isLoading = false;

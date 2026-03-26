@@ -13,6 +13,7 @@ namespace Discount.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.Authorize]
     public class DiscountController : ControllerBase
     {
         private readonly DiscountContext _context;

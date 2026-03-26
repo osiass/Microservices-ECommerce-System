@@ -24,10 +24,16 @@ namespace WebUI.Services
             return (null, null);
         }
 
-        public async Task<bool> Register(UserRegisterDto registerDto)
+        public async Task<(bool Success, string? ErrorMessage)> Register(UserRegisterDto registerDto)
         {
             var response = await _httpClient.PostAsJsonAsync("/identity/api/auth/register", registerDto);
-            return response.IsSuccessStatusCode;
+            string? error = null;
+            if (!response.IsSuccessStatusCode)
+            {
+                error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[AuthService] Register failed: {response.StatusCode} - {error}");
+            }
+            return (response.IsSuccessStatusCode, error);
         }
 
         public async Task<UserProfileDto?> GetProfile(string username)

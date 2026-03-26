@@ -16,33 +16,40 @@
                 <p class="text-white-50 opacity-75 small">Hemen saniyeler içinde katılın</p>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">Kullanıcı Adı</label>
-                <div class="position-relative">
-                    <i class="bi bi-person position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
-                    <input @bind="model.UserName" class="form-control ps-5" placeholder="kullanıcı adınız" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
-                </div>
-            </div>
+            <EditForm Model="model" OnValidSubmit="HandleRegister">
+                <DataAnnotationsValidator />
 
-            <div class="mb-3">
-                <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">E-Posta</label>
-                <div class="position-relative">
-                    <i class="bi bi-envelope position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
-                    <input @bind="model.Email" type="email" class="form-control ps-5" placeholder="email@adres.com" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">Kullanıcı Adı</label>
+                    <div class="position-relative">
+                        <i class="bi bi-person position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
+                        <InputText @bind-Value="model.UserName" class="form-control ps-5" placeholder="kullanıcı adınız" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
+                    </div>
+                    <ValidationMessage For="@(() => model.UserName)" class="text-danger small mt-1" />
                 </div>
-            </div>
 
-            <div class="mb-4">
-                <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">Şifre</label>
-                <div class="position-relative">
-                    <i class="bi bi-key position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
-                    <input @bind="model.Password" type="password" class="form-control ps-5" placeholder="••••••••" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">E-Posta</label>
+                    <div class="position-relative">
+                        <i class="bi bi-envelope position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
+                        <InputText @bind-Value="model.Email" type="email" class="form-control ps-5" placeholder="email@adres.com" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
+                    </div>
+                    <ValidationMessage For="@(() => model.Email)" class="text-danger small mt-1" />
                 </div>
-            </div>
 
-            <button @onclick="HandleRegister" class="btn btn-success w-100 py-3 fw-bold mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);">
-                Kaydı Tamamla <i class="bi bi-check2-circle ms-2"></i>
-            </button>
+                <div class="mb-4">
+                    <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1 mb-2">Şifre</label>
+                    <div class="position-relative">
+                        <i class="bi bi-key position-absolute top-50 start-0 translate-middle-y ms-3 text-white-50 opacity-50"></i>
+                        <InputText @bind-Value="model.Password" type="password" class="form-control ps-5" placeholder="••••••••" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" />
+                    </div>
+                    <ValidationMessage For="@(() => model.Password)" class="text-danger small mt-1" />
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-3 fw-bold mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);">
+                    Kaydı Tamamla <i class="bi bi-check2-circle ms-2"></i>
+                </button>
+            </EditForm>
             
             @if (!string.IsNullOrEmpty(msg))
             {
@@ -68,7 +75,7 @@
         msg = "";
         try
         {
-            var success = await AuthService.Register(model);
+            var (success, error) = await AuthService.Register(model);
             if (success)
             {
                 ToastService.Notify("Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...", ToastLevel.Success);
@@ -77,8 +84,27 @@
             }
             else
             {
+                // API'den gelen karmaşık JSON hatasını ayıkla (Örn: Validasyon hataları)
+                try {
+                    using var doc = System.Text.Json.JsonDocument.Parse(error ?? "{}");
+                    if (doc.RootElement.TryGetProperty("errors", out var errors))
+                    {
+                        var firstError = errors.EnumerateObject().FirstOrDefault();
+                        var firstMessage = firstError.Value.EnumerateArray().FirstOrDefault().GetString();
+                        msg = firstMessage ?? "Kayıt başarısız.";
+                    }
+                    else if (doc.RootElement.TryGetProperty("message", out var message))
+                    {
+                        msg = message.GetString() ?? "Kayıt başarısız.";
+                    }
+                    else {
+                        msg = error ?? "Kayıt başarısız.";
+                    }
+                } catch {
+                    msg = error ?? "Kayıt başarısız.";
+                }
+
                 ToastService.Notify("Kayıt sırasında bir hata oluştu!", ToastLevel.Error);
-                msg = "Kayıt başarısız. Lütfen bilgilerinizi kontrol edin.";
             }
         }
         catch (Exception ex)

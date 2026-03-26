@@ -34,4 +34,31 @@ public class StockController : ControllerBase
         }).ToList());
     }
 
+    [HttpPost("seed")]
+    public async Task<IActionResult> SeedStocks([FromBody] List<StockDto> stockDtos)
+    {
+        if (stockDtos == null || !stockDtos.Any()) return BadRequest("Stok verisi boş olamaz.");
+
+        foreach (var dto in stockDtos)
+        {
+            var stock = await _context.Stocks.FirstOrDefaultAsync(s => s.ProductId == dto.ProductId);
+            if (stock != null)
+            {
+                stock.Quantity = dto.Quantity;
+                stock.ProductName = dto.ProductName;
+            }
+            else
+            {
+                _context.Stocks.Add(new Stock
+                {
+                    ProductId = dto.ProductId,
+                    ProductName = dto.ProductName,
+                    Quantity = dto.Quantity
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok("Stoklar başarıyla senkronize edildi.");
+    }
 }

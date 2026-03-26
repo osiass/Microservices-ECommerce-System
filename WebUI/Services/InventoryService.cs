@@ -11,18 +11,49 @@ namespace WebUI.Services
             _httpClient = httpClientFactory.CreateClient("GatewayClient");
         }
 
-        public async Task<List<StockDto>> GetStocks()
+        public async Task<List<StockDto>> GetStocks(string? token = null)
         {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             try
             {
-                return await _httpClient.GetFromJsonAsync<List<StockDto>>("/inventory/api/stock") ?? new();
+                if (!string.IsNullOrEmpty(token))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                }
+
+                return await _httpClient.GetFromJsonAsync<List<StockDto>>("/inventory/api/Stock", cts.Token) ?? new();
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[InventoryService] GetStocks hatası: {ex.Message}");
                 return new();
             }
         }
 
-        
+        public async Task<bool> SeedStocks(string? token, List<StockDto> stocks)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(token))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                }
+
+                var response = await _httpClient.PostAsJsonAsync("/inventory/api/Stock/seed", stocks);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[InventoryService] SeedStocks Hatası: {response.StatusCode} - {error}");
+                }
+                
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[InventoryService] Stok tohumlama hatası: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
