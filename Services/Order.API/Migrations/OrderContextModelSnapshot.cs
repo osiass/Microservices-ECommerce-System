@@ -34,14 +34,23 @@ namespace Order.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("CouponCode")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("numeric");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("numeric");
+
+                    b.Property<string>("TransactionId")
+                        .HasColumnType("text");
 
                     b.Property<string>("UserName")
                         .IsRequired()

@@ -2,6 +2,11 @@ using Inventory.API.Data;
 using Inventory.API.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using Common.DTOs;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Inventory.API.Controllers;
 
@@ -17,25 +22,16 @@ public class StockController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Stock>>> GetStocks() 
-    //koleksiyon ben sana bi stock listesi döndürüyorum ama nasıl olduğu önemli değil list array hashset olablir
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<StockDto>))]
+    public async Task<ActionResult<IEnumerable<StockDto>>> GetStocks()
     {
-        return await _context.Stocks.ToListAsync();
+        var stocks = await _context.Stocks.AsNoTracking().ToListAsync();
+        return Ok(stocks.Select(s => new StockDto 
+        { 
+            ProductId = s.ProductId,
+            ProductName = s.ProductName,
+            Quantity = s.Quantity 
+        }).ToList());
     }
 
-    // Stok Ekleme (Test amaçlı)
-    [HttpPost("seed")]
-    public async Task<ActionResult> Seed()
-    {
-        if (await _context.Stocks.AnyAsync()) return BadRequest("Zaten stok var");
-
-        _context.Stocks.AddRange(new List<Stock>
-        {
-            new Stock { ProductId = "1", Count = 100 },
-            new Stock { ProductId = "2", Count = 50 }
-        });
-
-        await _context.SaveChangesAsync();
-        return Ok("Stoklar eklendi");
-    }
 }

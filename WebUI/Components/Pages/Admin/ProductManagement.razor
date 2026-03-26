@@ -149,18 +149,18 @@
                 }
             </div>
             <div class="mb-3">
-                <label class="form-label small">Kategori</label>
-                <input @bind="newProduct.Category" class="form-control shadow-none" placeholder="Örn: Donanım" />
-            </div>
-            <div class="row g-3 mb-3">
-                <div class="col-6">
-                    <label class="form-label small">Puan (0-5)</label>
-                    <input @bind="newProduct.Rating" type="number" step="0.1" class="form-control shadow-none" />
+                <label class="form-label small d-block">Kategori</label>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    @foreach (var cat in categories)
+                    {
+                        <span @onclick="() => SetCategory(cat)" 
+                              class="badge rounded-pill border py-2 px-3 cursor-pointer @(newProduct.Category == cat ? "bg-primary border-primary" : "bg-dark text-light border-secondary hover-bg-secondary")"
+                              style="cursor: pointer; transition: all 0.2s;">
+                            @cat
+                        </span>
+                    }
                 </div>
-                <div class="col-6">
-                    <label class="form-label small">Değerlendirme</label>
-                    <input @bind="newProduct.ReviewCount" type="number" class="form-control shadow-none" />
-                </div>
+                <input @bind="newProduct.Category" class="form-control shadow-none bg-dark text-light border-secondary" placeholder="Veya manuel yazın..." />
             </div>
             <div class="mb-3">
                 <label class="form-label small">Özellikler (Satır başı bir tane)</label>
@@ -199,6 +199,9 @@
     private string? featuresText;
     private IBrowserFile? selectedFile;
     private ProductDto newProduct = new();
+    private List<string> categories = new() { "Donanım", "Klavye", "Mouse", "Monitör", "Laptop" };
+
+    private void SetCategory(string cat) => newProduct.Category = cat;
 
     protected override async Task OnInitializedAsync()
     {
@@ -274,20 +277,6 @@
         
         if(!string.IsNullOrEmpty(token))
         {
-            // Eğer dosya seçilmişse önce onu yükle
-            if (selectedFile != null)
-            {
-                isUploading = true;
-                using var stream = selectedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-                var imageUrl = await CatalogService.UploadImage(token, stream, selectedFile.Name);
-                
-                if (!string.IsNullOrEmpty(imageUrl))
-                {
-                    newProduct.ImageUrl = imageUrl;
-                }
-                isUploading = false;
-            }
-
             // Özellikleri metin alanından ayıkla
             newProduct.Features = featuresText?.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                                               .Select(x => x.Trim())
@@ -296,11 +285,11 @@
             bool success;
             if (isEditMode)
             {
-                success = await CatalogService.UpdateProduct(token, newProduct);
+                success = await CatalogService.UpdateProduct(token, newProduct, selectedFile);
             }
             else
             {
-                success = await CatalogService.CreateProduct(token, newProduct);
+                success = await CatalogService.CreateProduct(token, newProduct, selectedFile);
             }
 
             if(success)
@@ -311,28 +300,34 @@
             }
             else
             {
-                ToastService.Notify("Ürün eklenemedi (Yetki hatası olabilir).", ToastLevel.Error);
+                Console.WriteLine($"[ProductManagement] Kaydetme başarısız. Mode: {(isEditMode ? "Edit" : "Add")}");
+                ToastService.Notify("Ürün kaydedilemedi. Lütfen tarayıcı konsoluna (F12) bakın.", ToastLevel.Error);
             }
+        }
+        else
+        {
+            ToastService.Notify("Oturum süreniz dolmuş olabilir. Lütfen tekrar giriş yapın.", ToastLevel.Warning);
         }
         
         isProcessing = false;
     }
 
-    private async Task ConfirmDelete(Guid id)
+    private async Task ConfirmDelete(string? id)
     {
+        if (string.IsNullOrEmpty(id)) return;
         var token = await LocalStore.GetItemAsync<string>("authToken");
         
         if(!string.IsNullOrEmpty(token))
         {
-            var success = await CatalogService.DeleteProduct(token, id.ToString());
-            if(success)
+            var result = await CatalogService.DeleteProduct(token, id);
+            if(result.Success)
             {
                 await LoadProducts();
                 ToastService.Notify("Ürün başarıyla silindi.", ToastLevel.Success);
             }
             else
             {
-                ToastService.Notify("Ürün silinemedi.", ToastLevel.Error);
+                ToastService.Notify($"Ürün silinemedi! Hata: {result.Message}", ToastLevel.Error);
             }
         }
     }

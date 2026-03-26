@@ -17,7 +17,7 @@ namespace WebUI.Services
 
             if(response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
 
                 return (result?.Token, result?.Role);
             }
@@ -40,10 +40,5 @@ namespace WebUI.Services
             var response = await _httpClient.PutAsJsonAsync($"/identity/api/auth/profile/{username}", updateDto);
             return response.IsSuccessStatusCode;
         }
-    }
-    public class LoginResponse 
-    { 
-        public string Token { get; set; } = ""; 
-        public string Role { get; set; } = "";
     }
 }

@@ -10,7 +10,7 @@ namespace Common.DTOs
         public string CardHolderName { get; set; }
         public int ExpirationMonth { get; set; }
         public int ExpirationYear { get; set; }
-        public int CVV { get; set; }
+        public string CVV { get; set; } = string.Empty;
         public decimal Amount { get; set; }
     }
 }

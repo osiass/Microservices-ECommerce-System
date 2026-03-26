@@ -54,6 +54,28 @@ services:
     ports:
       - "5435:5432"
 
+  # Payment Veritabanı
+  payment.db:
+    image: postgres:latest
+    container_name: payment.db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=PaymentDb
+    ports:
+      - "5436:5432"
+
+  # Inventory Veritabanı
+  inventory.db:
+    image: postgres:latest
+    container_name: inventory.db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=InventoryDb
+    ports:
+      - "5437:5432"
+
 networks:
   default:
     name: ecommerce-network

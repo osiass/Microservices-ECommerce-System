@@ -15,12 +15,23 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<BasketService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<DiscountService>();
+builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<ToastService>();
 
 // Authentication & Authorization 
 builder.Services.AddAuthentication("Cookies")
-    .AddCookie("Cookies");
+    .AddCookie("Cookies", options => 
+    {
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    });
 builder.Services.AddAuthorizationCore();
+builder.Services.AddAntiforgery(options => 
+{
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, WebUI.Providers.CustomAuthStateProvider>();
 builder.Services.AddScoped<WebUI.Providers.CustomAuthStateProvider>(sp => (WebUI.Providers.CustomAuthStateProvider)sp.GetRequiredService<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider>());
@@ -29,7 +40,7 @@ builder.Services.AddScoped<WebUI.Providers.CustomAuthStateProvider>(sp => (WebUI
 // API Gateway istemcisi - Aspire Service Discovery ile servis isminden adresi çözer
 builder.Services.AddHttpClient("GatewayClient", client =>
 {
-    client.BaseAddress = new Uri("https://gateway");
+    client.BaseAddress = new Uri("http://gateway");
 });
 
 var app = builder.Build();
@@ -44,7 +55,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 

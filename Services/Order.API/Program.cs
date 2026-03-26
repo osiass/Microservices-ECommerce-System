@@ -6,6 +6,7 @@ using System.Text;
 using System;
 using Common.EventBus;
 using RabbitMQ.Client;
+using Common.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -31,9 +32,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options => {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false, // Teşhis için: Geçici olarak kapattık
-            ValidateAudience = false, // Teşhis için: Geçici olarak kapattık
-            ValidateLifetime = false, // Teşhis için: Geçici olarak kapattık
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = false,
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
@@ -42,6 +43,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.MapDefaultEndpoints();
 
@@ -52,9 +55,26 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Veritabanını otomatik oluştur ve migrasyonları uygula
+using (var scope = app.Services.CreateScope())
+{
+    try 
+    {
+        var context = scope.ServiceProvider.GetRequiredService<OrderContext>();
+        
+        await context.Database.MigrateAsync();
+        
+        Console.WriteLine("[Order.API] Migrasyonlar başarıyla uygulandı ve veritabanı güncellendi.");
+    }
+    catch (Exception ex)
+    {
+        var fullError = ex.Message + (ex.InnerException != null ? (" | Inner: " + ex.InnerException.Message) : "");
+        Console.WriteLine($"[Order.API] Startup error: {fullError}");
+    }
+}
 
 app.Run();

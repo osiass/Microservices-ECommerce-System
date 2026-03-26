@@ -61,6 +61,12 @@
                                 <div class="col-md-2">
                                     <p class="text-white-50 small mb-1 text-uppercase fw-bold opacity-50">Toplam Tutar</p>
                                     <h6 class="mb-0 fw-bold text-white">@order.TotalPrice.ToString("C2")</h6>
+                                    @if(order.Discount > 0)
+                                    {
+                                        <div class="text-success-glow smaller mt-1 animate-pulse" style="font-size: 0.75rem;">
+                                            <i class="bi bi-tag-fill me-1"></i> -@order.Discount.ToString("C2") (@order.CouponCode)
+                                        </div>
+                                    }
                                 </div>
                                 <div class="col-md-2">
                                     <p class="text-white-50 small mb-1 text-uppercase fw-bold opacity-50">Durum</p>

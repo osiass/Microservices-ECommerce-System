@@ -67,7 +67,15 @@
                                         </div>
                                     </td>
                                     <td class="text-white-50 small">@order.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
-                                    <td class="fw-bold text-primary">@order.TotalPrice.ToString("C")</td>
+                                    <td>
+                                        <div class="fw-bold text-primary">@order.TotalPrice.ToString("C")</div>
+                                        @if(order.Discount > 0)
+                                        {
+                                            <div class="text-success-glow smallest opacity-75" style="font-size: 0.7rem;">
+                                                <i class="bi bi-tag-fill me-1"></i> -@order.Discount.ToString("C") (@order.CouponCode)
+                                            </div>
+                                        }
+                                    </td>
                                     <td class="text-center pe-4">
                                         <select class="admin-select w-auto" 
                                                 @onchange='(e) => UpdateStatus(order, e)'>

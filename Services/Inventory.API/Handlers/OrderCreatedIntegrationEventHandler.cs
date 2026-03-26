@@ -2,6 +2,11 @@ using Common.EventBus;
 using Common.Events;
 using Inventory.API.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
+using System;
 
 namespace Inventory.API.Handlers;
 
@@ -9,11 +14,13 @@ public class OrderCreatedIntegrationEventHandler : IIntegrationEventHandler<Orde
 {
     private readonly InventoryContext _context;
     private readonly ILogger<OrderCreatedIntegrationEventHandler> _logger;
+    private readonly IEventBus _eventBus;
 
-    public OrderCreatedIntegrationEventHandler(InventoryContext context, ILogger<OrderCreatedIntegrationEventHandler> logger)
+    public OrderCreatedIntegrationEventHandler(InventoryContext context, ILogger<OrderCreatedIntegrationEventHandler> logger, IEventBus eventBus)
     {
         _context = context;
         _logger = logger;
+        _eventBus = eventBus;
     }
 
     public async Task Handle(OrderCreatedIntegrationEvent @event)
@@ -29,8 +36,15 @@ public class OrderCreatedIntegrationEventHandler : IIntegrationEventHandler<Orde
             if (stock != null)
             {
                 //Bulduğumuz kayıttan sipariş edilen adet kadar düş
-                stock.Count -= item.Quantity;
-                _logger.LogInformation("Ürün {ProductId} için stok {Quantity} adet düşürüldü. Yeni stok: {NewCount}", item.ProductId, item.Quantity, stock.Count);
+                stock.Quantity -= item.Quantity;
+                _logger.LogInformation("Ürün {ProductId} için stok {Quantity} adet düşürüldü. Yeni stok: {NewCount}", item.ProductId, item.Quantity, stock.Quantity);
+                
+                // Diğer servislere Catalog gibi haber ver
+                await _eventBus.PublishAsync(new StockUpdatedIntegrationEvent 
+                { 
+                    ProductId = item.ProductId, 
+                    NewStock = stock.Quantity 
+                });
             }
             else
             {
@@ -40,7 +54,6 @@ public class OrderCreatedIntegrationEventHandler : IIntegrationEventHandler<Orde
 
         //Tüm değişiklikleri veritabanına tek seferde yansıt
         await _context.SaveChangesAsync();
-        
         _logger.LogInformation("Sipariş {OrderId} için stok güncelleme tamamlandı.", @event.OrderId);
     }
 }

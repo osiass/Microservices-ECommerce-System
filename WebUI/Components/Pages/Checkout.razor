@@ -97,12 +97,13 @@
 
 
 @code {
-    private string address = "";
+    [SupplyParameterFromQuery]
+    private string address { get; set; } = "";
     private string cardNumber = "";
     private string cardHolderName = "";
     private string expMonth = "";
     private string expYear = "";
-    private int cvv;
+    private string cvv = "";
     
     private string errorMessage = "";
     private bool isProcessing = false;
@@ -171,13 +172,11 @@
                     {
                         Console.WriteLine($"[Checkout.razor] Sepet API'den silinemedi! Hata: {deleteRes.Message}");
                     }
-                    Nav.NavigateTo("/order-success");
+                    Nav.NavigateTo($"/order-success?transactionId={result.TransactionId}");
                 }
                 else
                 {
                     errorMessage = $"Sipariş tamamlanamadı: {result.Message}";
-                    var diag = await OrderService.GetAuthStatus(token);
-                    errorMessage += $" | Teşhis: {diag}";
                 }
             }
             else

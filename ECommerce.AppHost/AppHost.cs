@@ -4,7 +4,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var rabbitmq = builder.AddRabbitMQ("messaging");
 
 // Servisleri tanımla
-var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api");
+var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
+    .WithReference(rabbitmq);
 var discountApi = builder.AddProject<Projects.Discount_API>("discount-api");
 var identityApi = builder.AddProject<Projects.Identity_API>("identity-api");
 var basketApi = builder.AddProject<Projects.Basket_API>("basket-api");

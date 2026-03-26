@@ -53,14 +53,10 @@ public class BasketService
             
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[BasketService] Sepet silme hatası ({response.StatusCode}): {error}");
-                
-                // İkinci bir şans: query string ile de dene 
-                var retryResponse = await _httpClient.DeleteAsync($"/basket/api/basket?userName={cleanedUser}");
-                if (retryResponse.IsSuccessStatusCode) return (true, "Retry worked");
-                
-                return (false, $"API Error: {response.StatusCode} - {error}");
+                var content = await response.Content.ReadAsStringAsync();
+                var cleanError = CleanJsonError(content) ?? $"Hata: {response.StatusCode}";
+                Console.WriteLine($"[BasketService] Sepet silme hatası: {cleanError}");
+                return (false, cleanError);
             }
             return (true, "Success");
         }
@@ -97,7 +93,8 @@ public class BasketService
             if (!response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                return (false, $"{(int)response.StatusCode} {response.ReasonPhrase}: {content}");
+                var cleanError = CleanJsonError(content) ?? $"{response.ReasonPhrase}";
+                return (false, cleanError);
             }
             return (true, "");
         }
@@ -126,5 +123,22 @@ public class BasketService
         {
             Console.WriteLine($"Sepet güncelleme hatası: {ex.Message}");
         }
+    }
+
+    private string? CleanJsonError(string json)
+    {
+        try
+        {
+            using var jsonDoc = System.Text.Json.JsonDocument.Parse(json);
+            if (jsonDoc.RootElement.TryGetProperty("errors", out var errors))
+            {
+                var firstError = errors.EnumerateObject().FirstOrDefault();
+                return firstError.Value.EnumerateArray().FirstOrDefault().GetString();
+            }
+            if (jsonDoc.RootElement.TryGetProperty("title", out var title)) return title.GetString();
+            if (jsonDoc.RootElement.TryGetProperty("detail", out var detail)) return detail.GetString();
+        }
+        catch { }
+        return null;
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Common.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,11 +14,13 @@ builder.AddServiceDefaults();
 builder.Services.AddHttpClient("Catalog", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:Catalog"]!);
+    client.Timeout = TimeSpan.FromSeconds(5); // İç çağrılar uzun sürmemeli
 });
 
 builder.Services.AddHttpClient("Discount", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:Discount"]!);
+    client.Timeout = TimeSpan.FromSeconds(3); // İndirim servisi hızlı cevap vermeli
 });
 
 // Database & API Configuration
@@ -27,23 +30,26 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<BasketContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Authentication with Diagnostic Relaxations
+// Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false, // Teşhis için: Issuer doğrulamasını geçici olarak kapattık
-            ValidateAudience = false, // Teşhis için: Audience doğrulamasını geçici olarak kapattık
-            ValidateLifetime = false, // Teşhis için: Zaman uyuşmazlığı (clock skew) ihtimalini eledik
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = false,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
     });
 
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
 app.MapDefaultEndpoints();
 
 if (app.Environment.IsDevelopment())
@@ -53,11 +59,23 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Veritabanını otomatik oluştur ve migrasyonları uygula
+using (var scope = app.Services.CreateScope())
+{
+    try 
+    {
+        var context = scope.ServiceProvider.GetRequiredService<BasketContext>();
+        await context.Database.MigrateAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Basket.API] Startup error: {ex.Message}");
+    }
+}
 
 app.Run();

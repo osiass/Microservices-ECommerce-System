@@ -1,4 +1,5 @@
 @page "/order-success"
+@using Microsoft.AspNetCore.Components
 @inject NavigationManager Nav
 
 <div class="container d-flex flex-column align-items-center justify-content-center animate-fade-in" style="min-height: 80vh;">
@@ -10,9 +11,17 @@
         </div>
         
         <h1 class="display-5 fw-black mb-3 text-gradient">Siparişiniz Alındı! 🎉</h1>
-        <p class="text-muted mb-5 px-lg-4 fs-5">
-            Harika bir seçim yaptınız. Siparişiniz başarıyla işleme alındı ve hazırlık aşamasına geçildi. Tüm detaylar e-posta adresinize gönderildi.
+        <p class="text-muted mb-4 px-lg-4 fs-5">
+            Harika bir seçim yaptınız. Siparişiniz başarıyla işleme alındı ve hazırlık aşamasına geçildi.
         </p>
+
+        @if (!string.IsNullOrEmpty(TransactionId))
+        {
+            <div class="mb-5 p-4 glass-card bg-white bg-opacity-10 border-dashed" style="border-color: var(--primary-glow);">
+                <div class="small text-white opacity-75 text-uppercase fw-bold mb-2">Ödeme İşlem Numarası</div>
+                <div class="font-monospace text-primary-glow fs-4 fw-bold">@TransactionId</div>
+            </div>
+        }
 
         <div class="d-grid gap-3">
             <button class="btn btn-primary btn-lg py-3 fw-bold rounded-4 shadow-glow" @onclick='() => Nav.NavigateTo("/")'>
@@ -27,3 +36,9 @@
         </div>
     </div>
 </div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? TransactionId { get; set; }
+}

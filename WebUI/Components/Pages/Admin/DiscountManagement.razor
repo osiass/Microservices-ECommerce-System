@@ -1,0 +1,230 @@
+@page "/admin/discounts"
+@using WebUI.Services
+@using Common.DTOs
+@inject DiscountService DiscountService
+@inject ToastService ToastService
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+
+<div class="container-fluid py-4 min-vh-100">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-white mb-1">Kupon Yönetimi 🏷️</h2>
+            <p class="text-white-50 small mb-0">İndirim kodlarını oluşturun, düzenleyin ve yönetin</p>
+        </div>
+        <button class="btn btn-primary px-4 py-2 border-0 shadow-lg" @onclick="OpenAddModal" style="border-radius: 12px; background: var(--primary-glow);">
+            <i class="bi bi-plus-lg me-2"></i> Yeni Kupon Oluştur
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="row g-4">
+            @for (int i = 0; i < 3; i++)
+            {
+                <div class="col-md-4">
+                    <div class="admin-card p-4" style="height: 200px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px;">
+                        <div class="skeleton-shimmer h-100 w-100 rounded-3"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (coupons == null || !coupons.Any())
+    {
+        <div class="admin-card text-center p-5" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 24px;">
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                <i class="bi bi-ticket-perforated text-primary fs-1"></i>
+            </div>
+            <h4 class="text-white fw-bold">Henüz Kupon Yok</h4>
+            <p class="text-white-50 mx-auto" style="max-width: 400px;">Satışları artırmak için ilk indirim kuponunuzu hemen oluşturun!</p>
+            <button class="btn btn-outline-primary mt-3 px-4 border-2" @onclick="OpenAddModal" style="border-radius: 10px;">
+                Kupon Oluşturmaya Başla
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var coupon in coupons)
+            {
+                <div class="col-md-4">
+                    <div class="admin-card border-0 p-4 h-100 position-relative animate__animated animate__fadeIn" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08) !important; backdrop-filter: blur(20px); border-radius: 24px;">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="badge @(coupon.IsActive ? "bg-success" : "bg-danger") bg-opacity-10 @(coupon.IsActive ? "text-success" : "text-danger") border-0 px-3 py-2" style="border-radius: 8px;">
+                                @(coupon.IsActive ? "Aktif" : "Pasif")
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-link text-white-50 p-0" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical fs-5"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-white border-opacity-10 shadow-lg" style="background: rgba(30,30,40,0.95); backdrop-filter: blur(10px); border-radius: 12px;">
+                                    <li><button class="dropdown-item py-2" @onclick="() => OpenEditModal(coupon)"><i class="bi bi-pencil me-2 text-primary"></i> Düzenle</button></li>
+                                    <li><hr class="dropdown-divider border-white border-opacity-10"></li>
+                                    <li><button class="dropdown-item py-2 text-danger" @onclick="() => DeleteCoupon(coupon.Id)"><i class="bi bi-trash me-2"></i> Sil</button></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <h3 class="fw-bold text-white mb-1">@coupon.Code</h3>
+                            <p class="text-white-50 small">@coupon.Description</p>
+                        </div>
+
+                        <div class="d-flex align-items-end justify-content-between mt-auto">
+                            <div>
+                                <span class="text-white-50 small d-block mb-1">Yüzde/Tutar</span>
+                                <h2 class="text-primary fw-bold mb-0">₺@coupon.Amount</h2>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 p-2 rounded-3">
+                                <i class="bi bi-tag-fill text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (isModalOpen)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-2xl" style="background: rgba(25, 28, 36, 0.95); border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 24px;">
+                <div class="modal-header border-white border-opacity-10 p-4">
+                    <h5 class="modal-title fw-bold text-white">@(editingId == 0 ? "Yeni Kupon Oluştur" : "Kuponu Düzenle")</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1">Kupon Kodu</label>
+                        <input @bind="currentCoupon.Code" class="form-control admin-input" placeholder="Örn: SAVE20" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1">İndirim Tutarı (₺)</label>
+                        <input @bind="currentCoupon.Amount" type="number" class="form-control admin-input" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-white-50 small fw-bold text-uppercase opacity-75 ms-1">Açıklama</label>
+                        <textarea @bind="currentCoupon.Description" class="form-control admin-input" rows="2" placeholder="Kupon detayları..."></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input bg-primary border-0" type="checkbox" @bind="currentCoupon.IsActive" id="isActiveSwitch">
+                        <label class="form-check-label text-white ms-2" for="isActiveSwitch">Aktif mi?</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-link text-white-50 text-decoration-none px-4" @onclick="CloseModal">Vazgeç</button>
+                    <button type="button" class="btn btn-primary px-4 py-2" @onclick="SaveCoupon" style="border-radius: 10px; background: var(--primary-glow); border: none;">
+                        @(editingId == 0 ? "Oluştur" : "Güncelle")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .admin-input {
+        background: rgba(0,0,0,0.2) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        color: white !important;
+        padding: 0.8rem 1rem !important;
+        border-radius: 12px !important;
+    }
+    .admin-input:focus {
+        background: rgba(0,0,0,0.3) !important;
+        border-color: var(--primary-glow) !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+    .skeleton-shimmer {
+        background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite linear;
+    }
+    @@keyframes shimmer {
+        from { background-position: -200% 0; }
+        to { background-position: 200% 0; }
+    }
+</style>
+
+@code {
+    private List<CouponDto> coupons = new();
+    private bool isLoading = true;
+    private bool isModalOpen = false;
+    private int editingId = 0;
+    private CouponDto currentCoupon = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCoupons();
+    }
+
+    private async Task LoadCoupons()
+    {
+        isLoading = true;
+        try {
+            coupons = await DiscountService.GetCoupons();
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        editingId = 0;
+        currentCoupon = new CouponDto { IsActive = true };
+        isModalOpen = true;
+    }
+
+    private void OpenEditModal(CouponDto coupon)
+    {
+        editingId = coupon.Id;
+        currentCoupon = new CouponDto 
+        { 
+            Id = coupon.Id, 
+            Code = coupon.Code, 
+            Amount = coupon.Amount, 
+            Description = coupon.Description, 
+            IsActive = coupon.IsActive 
+        };
+        isModalOpen = true;
+    }
+
+    private void CloseModal() => isModalOpen = false;
+
+    private async Task SaveCoupon()
+    {
+        if (string.IsNullOrWhiteSpace(currentCoupon.Code))
+        {
+            ToastService.Notify("Lütfen kupon kodu giriniz!", ToastLevel.Warning);
+            return;
+        }
+
+        bool success;
+        if (editingId == 0)
+            success = await DiscountService.CreateDiscount(currentCoupon);
+        else
+            success = await DiscountService.UpdateDiscount(editingId, currentCoupon);
+
+        if (success)
+        {
+            ToastService.Notify("Kupon başarıyla kaydedildi.", ToastLevel.Success);
+            isModalOpen = false;
+            await LoadCoupons();
+        }
+        else
+            ToastService.Notify("Bir hata oluştu!", ToastLevel.Error);
+    }
+
+    private async Task DeleteCoupon(int id)
+    {
+        if (await DiscountService.DeleteDiscount(id))
+        {
+            ToastService.Notify("Kupon silindi.", ToastLevel.Success);
+            await LoadCoupons();
+        }
+        else
+            ToastService.Notify("Silme işlemi başarısız!", ToastLevel.Error);
+    }
+}

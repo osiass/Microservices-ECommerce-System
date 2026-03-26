@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BCrypt.Net;
+using System.Threading.Tasks;
 
 namespace Identity.API.Controllers
 {
@@ -22,13 +23,13 @@ namespace Identity.API.Controllers
         }
 
         [HttpPost("register")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult> Register([FromBody] UserRegisterDto registerDto)
         {
-            // Kullanıcı zaten var mı kontrol 
             var exists = await _context.AppUsers.AnyAsync(u => u.UserName == registerDto.UserName.ToLower());
             if (exists) return BadRequest("Bu kullanıcı adı zaten alınmış!");
 
-            // Şifreyi Hashle (Güvenlik Best Practice)
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
             var newUser = new AppUser
@@ -45,12 +46,14 @@ namespace Identity.API.Controllers
         }
 
         [HttpPost("login")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult> Login([FromBody] UserLoginDto loginDto)
         {
-            // Kullanıcıyı bul (sadece kullanıcı adına göre)
-            var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.UserName == loginDto.UserName.ToLower());
+            var user = await _context.AppUsers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserName == loginDto.UserName.ToLower());
             
-            // Kullanıcı var mı ve şifre doğru mu kontrol et
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
             {
                 return Unauthorized(new { message = "Kullanıcı adı veya şifre hatalı!" });
@@ -63,9 +66,14 @@ namespace Identity.API.Controllers
         }
 
         [HttpGet("profile/{username}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserProfileDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserProfileDto>> GetProfile(string username)
         {
-            var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.UserName == username.ToLower());
+            var user = await _context.AppUsers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserName == username.ToLower());
+            
             if (user == null) return NotFound();
 
             return Ok(new UserProfileDto
@@ -77,6 +85,8 @@ namespace Identity.API.Controllers
         }
 
         [HttpPut("profile/{username}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateProfile(string username, [FromBody] UpdateProfileDto updateDto)
         {
             var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.UserName == username.ToLower());

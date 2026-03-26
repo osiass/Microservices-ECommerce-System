@@ -41,20 +41,4 @@ namespace WebUI.Services
 
         private void NotifyStateChanged() => OnChange?.Invoke();
     }
-
-    public class ToastMessage
-    {
-        public Guid Id { get; set; }
-        public string Text { get; set; }
-        public ToastLevel Level { get; set; }
-        public DateTime Timestamp { get; set; }
-    }
-
-    public enum ToastLevel
-    {
-        Success,
-        Error,
-        Info,
-        Warning
-    }
 }

@@ -1,15 +1,34 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
+using System.Collections.Generic;
+
 namespace Common.DTOs;
 
 public class ProductDto
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
+    public string? Id { get; set; }
+    
+    [Required(ErrorMessage = "Ürün adı zorunludur.")]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "Ürün adı 2-100 karakter arasında olmalıdır.")]
+    public string? Name { get; set; }
+    
+    [Required(ErrorMessage = "Kategori zorunludur.")]
+    public string? Category { get; set; }
+    
+    public string? Description { get; set; }
+    public string? ImageUrl { get; set; }
+    
+    [Required(ErrorMessage = "Fiyat zorunludur.")]
+    [Range(0.1, 1000000, ErrorMessage = "Fiyat 0.1 ile 1.000.000 arasında olmalıdır.")]
     public decimal Price { get; set; }
+    
+    public List<string>? Features { get; set; }
+    
+    [Range(0, 10000, ErrorMessage = "Stok miktarı 0 ile 10.000 arasında olmalıdır.")]
     public int StockQuantity { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
+    
     public double Rating { get; set; }
     public int ReviewCount { get; set; }
-    public List<string> Features { get; set; } = new();
+    
+    public IFormFile? ImageFile { get; set; }
 }

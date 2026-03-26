@@ -8,6 +8,7 @@
 @inject ILocalStorageService LocalStore
 @inject NavigationManager Nav
 @inject CatalogService CatalogService
+@inject DiscountService DiscountService
 
 <div class="container pt-4 pb-5 animate-fade-in">
     <div class="d-flex align-items-center mb-5">
@@ -59,6 +60,15 @@
                                             <small class="text-muted text-decoration-line-through">@item.OriginalPrice.ToString("C2")</small>
                                             <span class="badge badge-discount">-%@((int)((1 - item.Price / item.OriginalPrice) * 100))</span>
                                         }
+                                        @{
+                                            var product = products.FirstOrDefault(p => p.Id.ToString() == item.ProductId);
+                                            if (product != null && item.Quantity > product.StockQuantity)
+                                            {
+                                                <small class="text-danger-glow ms-2 fw-bold animate-pulse">
+                                                    <i class="bi bi-exclamation-circle-fill me-1"></i> Stok Yetersiz! (Mevcut: @product.StockQuantity)
+                                                </small>
+                                            }
+                                        }
                                     </div>
                                 </div>
                                 <div class="col-md-auto col-12 d-flex justify-content-between align-items-center mt-3 mt-md-0">
@@ -103,13 +113,39 @@
 
                 <div class="d-flex justify-content-between align-items-end mb-4 pt-3 border-top border-white border-opacity-10">
                     <span class="fw-bold text-muted mb-1">Genel Toplam</span>
-                    <span class="h2 fw-black mb-0 text-gradient">@((cart?.Items.Sum(x => x.Price * x.Quantity) ?? 0).ToString("C2"))</span>
+                    <span class="h2 fw-black mb-0 text-gradient">@(((cart?.Items.Sum(x => x.Price * x.Quantity) ?? 0) - (cart?.Discount ?? 0)).ToString("C2"))</span>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-uppercase mb-2">İndirim Kuponu</label>
+                    <div class="input-group">
+                        <input @bind="couponCode" class="form-control glass-input" placeholder="KUPON10" style="border-top-right-radius: 0; border-bottom-right-radius: 0;" />
+                        <button class="btn btn-outline-primary px-3" @onclick="ApplyCoupon" disabled="@isApplyingCoupon" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            @if(isApplyingCoupon) { <span class="spinner-border spinner-border-sm"></span> }
+                            else { <span>Uygula</span> }
+                        </button>
+                    </div>
+                    @if(!string.IsNullOrEmpty(cart?.CouponCode))
+                    {
+                        <div class="d-flex align-items-center mt-2 text-success-glow small">
+                            <i class="bi bi-patch-check-fill me-2"></i>
+                            <span><b>@cart.CouponCode</b> uygulandı! (-@cart.Discount.ToString("C2"))</span>
+                            <button class="btn btn-link btn-sm text-danger p-0 ms-auto text-decoration-none" @onclick="RemoveCoupon">Kaldır</button>
+                        </div>
+                    }
                 </div>
 
                 <div class="mb-4">
                     <label class="form-label fw-bold small text-uppercase mb-2">Teslimat Adresi</label>
                     <textarea @bind="address" class="form-control glass-input" rows="3" placeholder="Sokağınız, apartman bilgileriniz..."></textarea>
                 </div>
+
+                @if (HasStockIssue())
+                {
+                    <div class="alert alert-warning bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20 mb-4 rounded-4 small">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Bazı ürünler stokta yetersiz. Lütfen miktarları güncelleyin.
+                    </div>
+                }
 
                 @if (!string.IsNullOrEmpty(errorMessage))
                 {
@@ -121,7 +157,7 @@
                 <div class="d-grid gap-2">
                     <button class="btn btn-primary btn-lg py-3 fw-bold rounded-4 shadow-glow" 
                             @onclick="ConfirmCheckout" 
-                            disabled="@(isCheckingOut || cart == null || !cart.Items.Any())">
+                            disabled="@(isCheckingOut || cart == null || !cart.Items.Any() || HasStockIssue())">
                         @if (isCheckingOut)
                         {
                             <span class="spinner-border spinner-border-sm me-2"></span> <span>Hazırlanıyor...</span>
@@ -155,6 +191,10 @@
 @code {
     private ShoppingCartDto cart = new();
     private string address = "";
+    private string couponCode = "";
+    private bool isApplyingCoupon = false;
+
+    private List<ProductDto> products = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -174,7 +214,78 @@
         if (!string.IsNullOrEmpty(user))
         {
             cart = await BasketService.GetBasket(token ?? string.Empty, user);
+            if (!string.IsNullOrEmpty(cart?.CouponCode))
+            {
+                couponCode = cart.CouponCode;
+            }
+
+            if (cart != null && cart.Items.Any())
+            {
+                products = await CatalogService.GetProducts();
+            }
         }
+    }
+
+    private bool HasStockIssue()
+    {
+        if (cart == null || products == null) return false;
+        foreach (var item in cart.Items)
+        {
+            var product = products.FirstOrDefault(p => p.Id.ToString() == item.ProductId);
+            if (product != null && item.Quantity > product.StockQuantity)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private async Task ApplyCoupon()
+    {
+        if (string.IsNullOrWhiteSpace(couponCode)) return;
+
+        isApplyingCoupon = true;
+        try 
+        {
+            var coupon = await DiscountService.GetDiscount(couponCode);
+            if (coupon != null && coupon.IsActive)
+            {
+                cart.CouponCode = coupon.Code;
+                cart.Discount = coupon.Amount;
+                ToastService.Notify($"'{coupon.Code}' kuponu uygulandı!", ToastLevel.Success);
+                
+                var token = await LocalStore.GetItemAsync<string>("authToken");
+                await BasketService.UpdateBasket(token ?? "", cart);
+                StateHasChanged();
+            }
+            else
+            {
+                ToastService.Notify("Geçersiz veya süresi dolmuş kupon kodu!", ToastLevel.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify("Kupon uygulanırken hata oluştu: " + ex.Message, ToastLevel.Error);
+        }
+        finally
+        {
+            isApplyingCoupon = false;
+        }
+    }
+
+    private async Task RemoveCoupon()
+    {
+        if (cart == null) return;
+        
+        cart.CouponCode = null;
+        cart.Discount = 0;
+        couponCode = "";
+        
+        var token = await LocalStore.GetItemAsync<string>("authToken");
+        await BasketService.UpdateBasket(token ?? "", cart);
+        
+        ToastService.Notify("Kupon kaldırıldı.", ToastLevel.Info);
+        StateHasChanged();
     }
 
     private async Task UpdateQuantity(BasketItemDto item, int change)
@@ -220,7 +331,6 @@
 
     private async Task ConfirmCheckout()
     {
-        errorMessage = "";
         var token = await LocalStore.GetItemAsync<string>("authToken");
         var user = await LocalStore.GetItemAsync<string>("userName");
 
@@ -232,71 +342,13 @@
             return;
         }
 
-        if (string.IsNullOrEmpty(address))
-        {
-            errorMessage = "Lütfen teslimat adresini giriniz.";
-            return;
-        }
-
         if (cart == null || cart.Items == null || !cart.Items.Any())
         {
-            errorMessage = "Sepetiniz boş!";
+            ToastService.Notify("Sepetiniz boş!", ToastLevel.Error);
             return;
         }
 
-        isCheckingOut = true;
-        StateHasChanged();
-
-        try
-        {
-            var checkoutDto = new BasketCheckoutDto
-            {
-                UserName = user,
-                AddressLine = address,
-                Items = cart.Items,
-                CardNumber = "4444555566667777",
-                CardHolderName = "Osiass Test",
-                ExpirationMonth = 12,
-                ExpirationYear = 2028,
-                CVV = 123
-            };
-
-            // OrderService result bir Tuple döner
-            var result = await OrderService.Checkout(token, checkoutDto);
-
-            if (result.Success)
-            {
-                // APIde sepeti temizle
-                await BasketService.DeleteBasket(token, user);
-                
-                // UIda sepeti sıfırla
-                cart = new ShoppingCartDto { UserName = user, Items = new List<BasketItemDto>() };
-                address = "";
-                
-                ToastService.Notify("Siparişiniz başarıyla alındı!", ToastLevel.Success);
-                
-                StateHasChanged();
-                // Sipariş başarılı sayfasına yönlendir
-                Nav.NavigateTo("/order-success");
-            }
-            else
-            {
-                errorMessage = $"Sipariş onaylanamadı: {result.Message}";
-                // Her türlü hata durumunda teşhis mesajını getir (Diagnostic)
-                var diag = await OrderService.GetAuthStatus(token);
-                errorMessage += $" | Teşhis: {diag}";
-                ToastService.Notify("Sipariş hatası!", ToastLevel.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Bir hata oluştu: {ex.Message}";
-        }
-        finally
-        {
-            isCheckingOut = false;
-            StateHasChanged();
-        }
+        Nav.NavigateTo($"/checkout?address={Uri.EscapeDataString(address)}");
     }
 
     private async Task ManualResetBasket()

@@ -11,7 +11,7 @@ namespace WebUI.Services
             _httpClient = httpClientFactory.CreateClient("GatewayClient");
         }
 
-        public async Task<(bool Success, string Message)> Checkout(string token, BasketCheckoutDto checkoutData)
+        public async Task<(bool Success, string Message, string? TransactionId)> Checkout(string token, BasketCheckoutDto checkoutData)
         {
             Console.WriteLine($"Checkout başlatıldı. User: {checkoutData.UserName}, Token mevcut: {!string.IsNullOrEmpty(token)}");
             if (!string.IsNullOrEmpty(token))
@@ -35,22 +35,47 @@ namespace WebUI.Services
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    return (true, string.Empty);
+                    var result = await response.Content.ReadFromJsonAsync<CheckoutResponse>();
+                    return (true, string.Empty, result?.TransactionId);
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                if (string.IsNullOrWhiteSpace(error))
+                var resultMsg = await response.Content.ReadAsStringAsync();
+                
+                try 
                 {
-                    error = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
+                    // JSON hata formatlarını (ProblemDetails) çöz çözümle
+                    using var jsonDoc = System.Text.Json.JsonDocument.Parse(resultMsg);
+                    if (jsonDoc.RootElement.TryGetProperty("errors", out var errors))
+                    {
+                        var firstError = errors.EnumerateObject().FirstOrDefault();
+                        resultMsg = firstError.Value.EnumerateArray().FirstOrDefault().GetString() ?? "Doğrulama hatası.";
+                    }
+                    else if (jsonDoc.RootElement.TryGetProperty("title", out var title))
+                    {
+                        resultMsg = title.GetString() ?? resultMsg;
+                    }
+                    else if (jsonDoc.RootElement.TryGetProperty("detail", out var detail))
+                    {
+                        resultMsg = detail.GetString() ?? resultMsg;
+                    }
                 }
-                return (false, error);
+                catch { /* JSON değilse direkt mesajı kullan */ }
+
+                if (string.IsNullOrWhiteSpace(resultMsg))
+                {
+                    resultMsg = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
+                }
+
+                return (false, resultMsg, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ödeme/Checkout hatası: {ex.Message}");
-                return (false, ex.Message);
+                return (false, ex.Message, null);
             }
         }
+
+        public record CheckoutResponse(string Message, int OrderId, string TransactionId);
 
         public async Task<List<OrderDto>> GetOrders(string token, string userName)
         {
