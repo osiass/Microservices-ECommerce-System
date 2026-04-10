@@ -30,18 +30,49 @@ else
             <div class="row g-5">
                 <!-- Görsel ve Teknik Özellikler -->
                 <div class="col-lg-6">
-                    <div class="glass-card product-main-img-card overflow-hidden mb-4">
-                        @if (!string.IsNullOrEmpty(product.ImageUrl))
+                    <!-- Ana Gorsel + Ok Butonlari -->
+                    <div class="gallery-main-wrapper position-relative mb-3">
+                        <div class="glass-card product-main-img-card overflow-hidden">
+                            @if (!string.IsNullOrEmpty(selectedImage))
+                            {
+                                <img src="@CatalogService.GetFullImageUrl(selectedImage)" class="img-fluid w-100 detail-img" alt="@product.Name">
+                            }
+                            else if (!string.IsNullOrEmpty(product.ImageUrl))
+                            {
+                                <img src="@CatalogService.GetFullImageUrl(product.ImageUrl)" class="img-fluid w-100 detail-img" alt="@product.Name">
+                            }
+                            else
+                            {
+                                <div class="detail-placeholder">
+                                    <i class="bi bi-cpu-fill"></i>
+                                </div>
+                            }
+                        </div>
+
+                        @if (allImages.Count > 1)
                         {
-                            <img src="@CatalogService.GetFullImageUrl(product.ImageUrl)" class="img-fluid w-100 detail-img" alt="@product.Name">
-                        }
-                        else
-                        {
-                            <div class="detail-placeholder">
-                                <i class="bi bi-cpu-fill"></i>
-                            </div>
+                            <button class="gallery-arrow gallery-arrow-left" @onclick="PrevImage">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button class="gallery-arrow gallery-arrow-right" @onclick="NextImage">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <div class="gallery-counter">@(selectedImageIndex + 1) / @allImages.Count</div>
                         }
                     </div>
+
+                    <!-- Kucuk Resim Galerisi -->
+                    @if (allImages.Count > 1)
+                    {
+                        <div class="d-flex gap-2 mb-4 flex-wrap justify-content-center">
+                            @foreach (var img in allImages)
+                            {
+                                <div class="gallery-thumb @(selectedImage == img ? "active" : "")" @onclick="() => SelectImage(img)">
+                                    <img src="@CatalogService.GetFullImageUrl(img)" alt="Gorsel" />
+                                </div>
+                            }
+                        </div>
+                    }
 
                     @if (product.Features != null && product.Features.Any())
                     {
@@ -242,6 +273,25 @@ else
     private string userName = "";
     private bool hasBought = false;
     private bool showCommentForm = false;
+    private string? selectedImage;
+    private List<string> allImages = new();
+    private int selectedImageIndex => allImages.IndexOf(selectedImage ?? "");
+
+    private void SelectImage(string img) => selectedImage = img;
+
+    private void NextImage()
+    {
+        if (allImages.Count == 0) return;
+        var index = (selectedImageIndex + 1) % allImages.Count;
+        selectedImage = allImages[index];
+    }
+
+    private void PrevImage()
+    {
+        if (allImages.Count == 0) return;
+        var index = (selectedImageIndex - 1 + allImages.Count) % allImages.Count;
+        selectedImage = allImages[index];
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -266,6 +316,14 @@ else
         product = await CatalogService.GetProductById(Id);
         if (product != null)
         {
+            // Tum resimleri birlestir (ana resim + ek resimler)
+            allImages = new();
+            if (!string.IsNullOrEmpty(product.ImageUrl))
+                allImages.Add(product.ImageUrl);
+            if (product.ImageUrls != null)
+                allImages.AddRange(product.ImageUrls);
+            selectedImage = allImages.FirstOrDefault();
+
             comments = await CatalogService.GetComments(Id);
         }
     }

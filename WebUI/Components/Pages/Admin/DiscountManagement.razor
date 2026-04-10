@@ -203,21 +203,31 @@
             return;
         }
 
-        bool success;
         var token = await LocalStore.GetItemAsync<string>("authToken");
         if (editingId == 0)
-            success = await DiscountService.CreateDiscount(currentCoupon, token);
-        else
-            success = await DiscountService.UpdateDiscount(editingId, currentCoupon, token);
-
-        if (success)
         {
-            ToastService.Notify("Kupon başarıyla kaydedildi.", ToastLevel.Success);
-            isModalOpen = false;
-            await LoadCoupons();
+            var result = await DiscountService.CreateDiscount(currentCoupon, token);
+            if (result.Success)
+            {
+                ToastService.Notify("Kupon başarıyla oluşturuldu.", ToastLevel.Success);
+                isModalOpen = false;
+                await LoadCoupons();
+            }
+            else
+                ToastService.Notify($"Hata: {result.Message}", ToastLevel.Error);
         }
         else
-            ToastService.Notify("Bir hata oluştu!", ToastLevel.Error);
+        {
+            var success = await DiscountService.UpdateDiscount(editingId, currentCoupon, token);
+            if (success)
+            {
+                ToastService.Notify("Kupon başarıyla güncellendi.", ToastLevel.Success);
+                isModalOpen = false;
+                await LoadCoupons();
+            }
+            else
+                ToastService.Notify("Güncelleme sırasında bir hata oluştu!", ToastLevel.Error);
+        }
     }
 
     private async Task DeleteCoupon(int id)

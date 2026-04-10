@@ -1,0 +1,484 @@
+@page "/products"
+@using WebUI.Services
+@using Common.DTOs
+@using Blazored.LocalStorage
+@inject CatalogService CatalogService
+@inject BasketService BasketService
+@inject ToastService ToastService
+@inject ILocalStorageService LocalStore
+@inject NavigationManager Nav
+
+<PageTitle>Tum Urunler | E-Ticaret</PageTitle>
+
+<div class="container py-5 animate-fade-in">
+    <!-- Baslik -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Tum <span class="text-gradient">Urunler</span></h2>
+            <p class="text-muted small mb-0">@(filteredProducts?.Count ?? 0) urun listeleniyor</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Siralama -->
+            <select class="form-select glass-input" style="width: auto; min-width: 180px;" @onchange="OnSortChanged">
+                <option value="default">Varsayilan Siralama</option>
+                <option value="price-asc">Fiyat: Dusukten Yuksege</option>
+                <option value="price-desc">Fiyat: Yuksekten Dusuge</option>
+                <option value="name-asc">A'dan Z'ye</option>
+                <option value="name-desc">Z'den A'ya</option>
+                <option value="rating">En Yuksek Puan</option>
+            </select>
+            <!-- Grid/List -->
+            <div class="btn-group">
+                <button class="btn btn-sm @(viewMode == "grid" ? "btn-primary" : "btn-outline-secondary")" @onclick='() => viewMode = "grid"'>
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                </button>
+                <button class="btn btn-sm @(viewMode == "list" ? "btn-primary" : "btn-outline-secondary")" @onclick='() => viewMode = "list"'>
+                    <i class="bi bi-list-ul"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hizli Filtre Etiketleri -->
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <button class="quick-chip @(activeQuickFilter == "highRated" ? "active" : "")" @onclick='() => ToggleQuickFilter("highRated")'>
+            <i class="bi bi-star-fill text-warning me-1"></i> Yuksek Puanli
+        </button>
+        <button class="quick-chip @(activeQuickFilter == "inStock" ? "active" : "")" @onclick='() => ToggleQuickFilter("inStock")'>
+            <i class="bi bi-check-circle-fill text-success me-1"></i> Stokta Var
+        </button>
+        <button class="quick-chip @(activeQuickFilter == "discounted" ? "active" : "")" @onclick='() => ToggleQuickFilter("discounted")'>
+            <i class="bi bi-percent text-info me-1"></i> Indirimli Urunler
+        </button>
+        <button class="quick-chip @(activeQuickFilter == "newArrivals" ? "active" : "")" @onclick='() => ToggleQuickFilter("newArrivals")'>
+            <i class="bi bi-lightning-fill text-warning me-1"></i> Yeni Eklenenler
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sol: Filtreler -->
+        <div class="col-lg-3">
+            <div class="glass-card p-4 sticky-summary" style="top: 80px;">
+                <h6 class="fw-bold mb-3 text-uppercase small opacity-50">Filtreler</h6>
+
+                <!-- Arama -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Arama</label>
+                    <div class="position-relative">
+                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 opacity-50"></i>
+                        <input type="text" class="form-control glass-input ps-5" placeholder="Urun ara..."
+                               @bind="searchTerm" @bind:event="oninput" @bind:after="ApplyFilters" />
+                    </div>
+                </div>
+
+                <!-- Kategori -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Kategori</label>
+                    <div class="d-flex flex-column gap-2">
+                        <button class="filter-btn @(selectedCategory == null ? "active" : "")" @onclick="() => SelectCategory(null)">
+                            <i class="bi bi-grid me-2"></i> Tumu <span class="ms-auto badge bg-white bg-opacity-10">@(allProducts?.Count ?? 0)</span>
+                        </button>
+                        @foreach (var cat in categories)
+                        {
+                            <button class="filter-btn @(selectedCategory == cat ? "active" : "")" @onclick="() => SelectCategory(cat)">
+                                <i class="bi bi-tag me-2"></i> @cat <span class="ms-auto badge bg-white bg-opacity-10">@(allProducts?.Count(p => p.Category == cat) ?? 0)</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Fiyat Araligi -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Fiyat Araligi</label>
+                    <div class="d-flex gap-2">
+                        <input type="number" class="form-control glass-input" placeholder="Min" @bind="minPrice" @bind:after="ApplyFilters" />
+                        <span class="text-muted align-self-center">-</span>
+                        <input type="number" class="form-control glass-input" placeholder="Max" @bind="maxPrice" @bind:after="ApplyFilters" />
+                    </div>
+                </div>
+
+                <!-- Stok Durumu -->
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="onlyInStock" @bind:after="ApplyFilters" id="stockFilter">
+                        <label class="form-check-label small" for="stockFilter">Sadece stokta olanlar</label>
+                    </div>
+                </div>
+
+                <!-- Favorilerim -->
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="onlyFavorites" @bind:after="ApplyFilters" id="favFilter" style="background-color: var(--bs-danger) !important; border-color: var(--bs-danger) !important;" />
+                        <label class="form-check-label small" for="favFilter"><i class="bi bi-heart-fill text-danger me-1"></i> Favorilerim (@favorites.Count)</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-outline-secondary btn-sm w-100 mt-2" @onclick="ResetFilters">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Filtreleri Temizle
+                </button>
+            </div>
+        </div>
+
+        <!-- Sag: Urun Listesi -->
+        <div class="col-lg-9">
+            @if (isLoading)
+            {
+                <div class="row g-4">
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        <div class="col-md-4">
+                            <div class="glass-card shimmer-wrapper" style="min-height: 350px; border-radius: 20px;"></div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (filteredProducts == null || !filteredProducts.Any())
+            {
+                <div class="glass-card text-center py-5">
+                    <i class="bi bi-search-heart mb-3" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <h4 class="fw-bold">Sonuc Bulunamadi</h4>
+                    <p class="text-muted">Filtrelerinizi degistirmeyi deneyin.</p>
+                    <button class="btn btn-outline-primary rounded-pill px-4" @onclick="ResetFilters">Filtreleri Temizle</button>
+                </div>
+            }
+            else if (viewMode == "grid")
+            {
+                <div class="row g-4">
+                    @foreach (var prod in pagedProducts)
+                    {
+                        <div class="col-sm-6 col-xl-4">
+                            <div class="glass-card product-card h-100">
+                                <div class="product-img-box" @onclick='() => Nav.NavigateTo($"/product/{prod.Id}")'>
+                                    @if (!string.IsNullOrEmpty(prod.ImageUrl))
+                                    {
+                                        <img src="@CatalogService.GetFullImageUrl(prod.ImageUrl)" class="product-image" alt="@prod.Name" />
+                                    }
+                                    else
+                                    {
+                                        <div class="placeholder-icon"><i class="bi bi-box-seam-fill"></i></div>
+                                    }
+                                    <span class="product-category-badge">@prod.Category</span>
+                                    <button class="fav-btn @(IsFavorite(prod.Id) ? "active" : "")" @onclick="() => ToggleFavorite(prod.Id)" @onclick:stopPropagation="true">
+                                        <i class="bi @(IsFavorite(prod.Id) ? "bi-heart-fill" : "bi-heart")"></i>
+                                    </button>
+                                    @if (prod.StockQuantity <= 0)
+                                    {
+                                        <div class="sold-out-overlay"><span class="badge bg-danger">Tukendi</span></div>
+                                    }
+                                </div>
+                                <div class="product-info-box p-4">
+                                    <h5 class="product-title" @onclick='() => Nav.NavigateTo($"/product/{prod.Id}")'>@prod.Name</h5>
+                                    <p class="product-desc">@prod.Description</p>
+                                    <div class="d-flex align-items-center gap-1 mb-2">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="bi @(i <= prod.Rating ? "bi-star-fill text-warning" : "bi-star text-muted")" style="font-size: 0.75rem;"></i>
+                                        }
+                                        <small class="text-muted ms-1">(@prod.ReviewCount)</small>
+                                    </div>
+                                    <div class="product-footer mt-auto pt-2">
+                                        <span class="price-val">@prod.Price.ToString("C2")</span>
+                                        <button class="btn-quick-add" @onclick="() => AddToCart(prod)" disabled="@busyProducts.Contains(prod.Id.ToString())">
+                                            @if (busyProducts.Contains(prod.Id.ToString()))
+                                            { <div class="spinner-border spinner-border-sm"></div> }
+                                            else
+                                            { <i class="bi bi-cart-plus"></i> }
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <!-- List View -->
+                <div class="d-flex flex-column gap-3">
+                    @foreach (var prod in pagedProducts)
+                    {
+                        <div class="glass-card p-3 product-list-item">
+                            <div class="row align-items-center g-3">
+                                <div class="col-auto">
+                                    <div class="list-img-wrapper" @onclick='() => Nav.NavigateTo($"/product/{prod.Id}")'>
+                                        @if (!string.IsNullOrEmpty(prod.ImageUrl))
+                                        {
+                                            <img src="@CatalogService.GetFullImageUrl(prod.ImageUrl)" alt="@prod.Name" />
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-box-seam-fill opacity-25" style="font-size: 2rem;"></i>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <h6 class="fw-bold mb-0 cursor-pointer" @onclick='() => Nav.NavigateTo($"/product/{prod.Id}")'>@prod.Name</h6>
+                                        <span class="badge bg-white bg-opacity-10 small">@prod.Category</span>
+                                        @if (prod.StockQuantity <= 0)
+                                        {
+                                            <span class="badge bg-danger">Tukendi</span>
+                                        }
+                                        else if (prod.StockQuantity <= 10)
+                                        {
+                                            <span class="badge bg-warning text-dark">Son @prod.StockQuantity adet</span>
+                                        }
+                                    </div>
+                                    <p class="text-muted small mb-1 text-truncate" style="max-width: 500px;">@prod.Description</p>
+                                    <div class="d-flex align-items-center gap-1">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="bi @(i <= prod.Rating ? "bi-star-fill text-warning" : "bi-star text-muted")" style="font-size: 0.7rem;"></i>
+                                        }
+                                        <small class="text-muted ms-1">(@prod.ReviewCount)</small>
+                                    </div>
+                                </div>
+                                <div class="col-auto text-end d-flex align-items-center gap-2">
+                                    <button class="fav-btn-list @(IsFavorite(prod.Id) ? "active" : "")" @onclick="() => ToggleFavorite(prod.Id)">
+                                        <i class="bi @(IsFavorite(prod.Id) ? "bi-heart-fill" : "bi-heart")"></i>
+                                    </button>
+                                    <div>
+                                        <h5 class="fw-bold text-gradient mb-2">@prod.Price.ToString("C2")</h5>
+                                        <button class="btn btn-primary btn-sm px-3" @onclick="() => AddToCart(prod)" disabled="@(busyProducts.Contains(prod.Id.ToString()) || prod.StockQuantity <= 0)">
+                                            @if (busyProducts.Contains(prod.Id.ToString()))
+                                            { <span class="spinner-border spinner-border-sm"></span> }
+                                            else
+                                            { <i class="bi bi-cart-plus me-1"></i> <span>Sepete Ekle</span> }
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <div class="d-flex justify-content-center align-items-center gap-2 mt-5">
+                    <button class="page-btn @(currentPage == 1 ? "disabled" : "")" @onclick="() => GoToPage(currentPage - 1)" disabled="@(currentPage == 1)">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+
+                    @for (int p = 1; p <= totalPages; p++)
+                    {
+                        var pageNum = p;
+                        @if (p == 1 || p == totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
+                        {
+                            <button class="page-btn @(currentPage == pageNum ? "active" : "")" @onclick="() => GoToPage(pageNum)">@pageNum</button>
+                        }
+                        else if (p == currentPage - 3 || p == currentPage + 3)
+                        {
+                            <span class="text-muted px-1">…</span>
+                        }
+                    }
+
+                    <button class="page-btn @(currentPage == totalPages ? "disabled" : "")" @onclick="() => GoToPage(currentPage + 1)" disabled="@(currentPage == totalPages)">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="text-center text-muted small mt-2">
+                    Sayfa @currentPage / @totalPages &nbsp;·&nbsp; Toplam @(filteredProducts?.Count ?? 0) ürün
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ProductDto>? allProducts;
+    private List<ProductDto>? filteredProducts;
+    private bool isLoading = true;
+    private string searchTerm = "";
+    private string? selectedCategory;
+    private decimal? minPrice;
+    private decimal? maxPrice;
+    private bool onlyInStock = false;
+    private bool onlyFavorites = false;
+    private string sortBy = "default";
+    private string viewMode = "grid";
+    private HashSet<string> busyProducts = new();
+    private HashSet<string> favorites = new();
+    private string? activeQuickFilter;
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 12;
+    private int totalPages => filteredProducts == null ? 1 : (int)Math.Ceiling(filteredProducts.Count / (double)pageSize);
+    private List<ProductDto> pagedProducts => filteredProducts?.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList() ?? new();
+
+    private List<string> categories = new() { "Klavye", "Mouse", "Kasa", "Kulaklık", "Monitör" };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var saved = await LocalStore.GetItemAsync<List<string>>("favorites");
+            if (saved != null) favorites = saved.ToHashSet();
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            allProducts = await CatalogService.GetProducts();
+            ApplyFilters();
+        }
+        catch
+        {
+            allProducts = new();
+            filteredProducts = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectCategory(string? category)
+    {
+        selectedCategory = category;
+        ApplyFilters();
+    }
+
+    private void OnSortChanged(ChangeEventArgs e)
+    {
+        sortBy = e.Value?.ToString() ?? "default";
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        if (allProducts == null) { filteredProducts = new(); return; }
+
+        var query = allProducts.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            query = query.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                                  || p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(selectedCategory))
+            query = query.Where(p => p.Category == selectedCategory);
+
+        if (minPrice.HasValue)
+            query = query.Where(p => p.Price >= minPrice.Value);
+
+        if (maxPrice.HasValue)
+            query = query.Where(p => p.Price <= maxPrice.Value);
+
+        if (onlyInStock)
+            query = query.Where(p => p.StockQuantity > 0);
+
+        if (onlyFavorites)
+            query = query.Where(p => favorites.Contains(p.Id ?? ""));
+
+        // Hizli filtre
+        var avgPrice = allProducts.Any() ? allProducts.Average(p => p.Price) : 0;
+        query = activeQuickFilter switch
+        {
+            "highRated" => query.Where(p => p.Rating >= 4),
+            "inStock" => query.Where(p => p.StockQuantity > 0),
+            "discounted" => query.Where(p => p.Price < avgPrice),
+            "newArrivals" => query.OrderByDescending(p => p.Id),
+            _ => query
+        };
+
+        query = sortBy switch
+        {
+            "price-asc" => query.OrderBy(p => p.Price),
+            "price-desc" => query.OrderByDescending(p => p.Price),
+            "name-asc" => query.OrderBy(p => p.Name),
+            "name-desc" => query.OrderByDescending(p => p.Name),
+            "rating" => query.OrderByDescending(p => p.Rating),
+            _ => query
+        };
+
+        filteredProducts = query.ToList();
+        currentPage = 1;
+    }
+
+    private void GoToPage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+    }
+
+    private void ResetFilters()
+    {
+        searchTerm = "";
+        selectedCategory = null;
+        minPrice = null;
+        maxPrice = null;
+        onlyInStock = false;
+        onlyFavorites = false;
+        activeQuickFilter = null;
+        sortBy = "default";
+        ApplyFilters();
+    }
+
+    private void ToggleQuickFilter(string filter)
+    {
+        if (activeQuickFilter == filter)
+            activeQuickFilter = null;
+        else
+            activeQuickFilter = filter;
+        ApplyFilters();
+    }
+
+    private bool IsFavorite(string? id) => !string.IsNullOrEmpty(id) && favorites.Contains(id);
+
+    private async Task ToggleFavorite(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        if (favorites.Contains(id))
+            favorites.Remove(id);
+        else
+            favorites.Add(id);
+        await LocalStore.SetItemAsync("favorites", favorites.ToList());
+        if (onlyFavorites) ApplyFilters();
+    }
+
+    private async Task AddToCart(ProductDto product)
+    {
+        var productKey = product.Id.ToString();
+        if (busyProducts.Contains(productKey)) return;
+
+        var authToken = await LocalStore.GetItemAsync<string>("authToken");
+        var userName = await LocalStore.GetItemAsync<string>("userName");
+
+        if (string.IsNullOrWhiteSpace(authToken) || string.IsNullOrWhiteSpace(userName) || authToken == "null")
+        {
+            userName = await LocalStore.GetItemAsync<string>("guestId");
+            if (string.IsNullOrEmpty(userName))
+            {
+                userName = "guest-" + Guid.NewGuid().ToString().Substring(0, 8);
+                await LocalStore.SetItemAsync("guestId", userName);
+            }
+            authToken = string.Empty;
+        }
+
+        busyProducts.Add(productKey);
+        StateHasChanged();
+
+        try
+        {
+            var result = await BasketService.AddItem(authToken, userName, product);
+            if (result.Success)
+                ToastService.Notify($"{product.Name} sepete eklendi!", ToastLevel.Success);
+            else
+                ToastService.Notify($"Hata: {result.Message}", ToastLevel.Error);
+        }
+        catch
+        {
+            ToastService.Notify("Baglanti sorunu nedeniyle urun eklenemedi.", ToastLevel.Error);
+        }
+        finally
+        {
+            busyProducts.Remove(productKey);
+            StateHasChanged();
+        }
+    }
+}

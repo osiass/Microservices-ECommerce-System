@@ -149,6 +149,22 @@
                 }
             </div>
             <div class="mb-3">
+                <label class="form-label small">Ek Resimler (Galeri)</label>
+                <div class="p-3 rounded-4" style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1);">
+                    <InputFile OnChange="HandleAdditionalFiles" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.webp" multiple />
+                    <div class="small text-white-50 mt-1">Birden fazla resim secebilirsiniz (Max 5 adet)</div>
+                    @if (additionalPreviews.Any())
+                    {
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                            @foreach (var preview in additionalPreviews)
+                            {
+                                <img src="@preview" class="rounded-3" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);" />
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="mb-3">
                 <label class="form-label small d-block">Kategori</label>
                 <div class="d-flex flex-wrap gap-2 mb-2">
                     @foreach (var cat in categories)
@@ -198,6 +214,8 @@
     private string? uploadPreview;
     private string? featuresText;
     private IBrowserFile? selectedFile;
+    private List<IBrowserFile> additionalFiles = new();
+    private List<string> additionalPreviews = new();
     private ProductDto newProduct = new();
     private List<string> categories = new() { "Donanım", "Klavye", "Mouse", "Monitör", "Laptop" };
 
@@ -222,14 +240,16 @@
         }
     }
 
-    private void ShowAddModal() 
-    { 
-        newProduct = new(); // Formu sıfırla
+    private void ShowAddModal()
+    {
+        newProduct = new();
         uploadPreview = null;
         featuresText = "";
         selectedFile = null;
+        additionalFiles = new();
+        additionalPreviews = new();
         isEditMode = false;
-        showModal = true; 
+        showModal = true;
     }
 
     private void ShowEditModal(ProductDto product)
@@ -250,6 +270,8 @@
         uploadPreview = CatalogService.GetFullImageUrl(product.ImageUrl);
         featuresText = string.Join("\n", product.Features);
         selectedFile = null;
+        additionalFiles = new();
+        additionalPreviews = new();
         isEditMode = true;
         showModal = true;
     }
@@ -259,12 +281,25 @@
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
         selectedFile = e.File;
-        // Önizleme oluştur
         var format = selectedFile.ContentType;
         var imageFile = await selectedFile.RequestImageFileAsync(format, 400, 400);
         var buffer = new byte[imageFile.Size];
         await imageFile.OpenReadStream().ReadAsync(buffer);
         uploadPreview = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private async Task HandleAdditionalFiles(InputFileChangeEventArgs e)
+    {
+        additionalFiles = e.GetMultipleFiles(5).ToList();
+        additionalPreviews.Clear();
+        foreach (var file in additionalFiles)
+        {
+            var format = file.ContentType;
+            var imageFile = await file.RequestImageFileAsync(format, 200, 200);
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream().ReadAsync(buffer);
+            additionalPreviews.Add($"data:{format};base64,{Convert.ToBase64String(buffer)}");
+        }
     }
 
     private async Task HandleAddProduct()
@@ -283,13 +318,14 @@
                                               .ToList() ?? new();
 
             bool success;
+            var extras = additionalFiles.Any() ? additionalFiles : null;
             if (isEditMode)
             {
-                success = await CatalogService.UpdateProduct(token, newProduct, selectedFile);
+                success = await CatalogService.UpdateProduct(token, newProduct, selectedFile, extras);
             }
             else
             {
-                success = await CatalogService.CreateProduct(token, newProduct, selectedFile);
+                success = await CatalogService.CreateProduct(token, newProduct, selectedFile, extras);
             }
 
             if(success)

@@ -137,7 +137,7 @@
 
                 <div class="mb-4">
                     <label class="form-label fw-bold small text-uppercase mb-2">Teslimat Adresi</label>
-                    <textarea @bind="address" class="form-control glass-input" rows="3" placeholder="Sokağınız, apartman bilgileriniz..."></textarea>
+                    <textarea @bind="address" @bind:after="SaveAddress" class="form-control glass-input" rows="3" placeholder="Sokağınız, apartman bilgileriniz..."></textarea>
                 </div>
 
                 @if (HasStockIssue())
@@ -199,6 +199,8 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadBasket();
+        // Kaydedilmiş adresi yükle
+        address = await LocalStore.GetItemAsync<string>("savedAddress") ?? "";
     }
 
     private async Task LoadBasket()
@@ -325,6 +327,8 @@
             ToastService.Notify($"{item.ProductName} sepetten çıkarıldı.", ToastLevel.Info);
         }
     }
+
+    private async Task SaveAddress() => await LocalStore.SetItemAsync("savedAddress", address);
 
     private string errorMessage = "";
     private bool isCheckingOut = false;

@@ -3,6 +3,7 @@ using Identity.API.Services;
 using Identity.API.Entities;
 using Microsoft.EntityFrameworkCore;
 using Common.Middleware;
+using BCrypt.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -38,8 +39,20 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<IdentityContext>();
         await context.Database.MigrateAsync();
-        
-        await context.SaveChangesAsync();
+
+        // Admin seed - yoksa otomatik oluştur
+        if (!await context.AppUsers.AnyAsync(u => u.Role == "Admin"))
+        {
+            context.AppUsers.Add(new Identity.API.Entities.AppUser
+            {
+                UserName = "admin",
+                Email = "admin@ecommerce.com",
+                Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                Role = "Admin"
+            });
+            await context.SaveChangesAsync();
+            Console.WriteLine("[Identity.API] Admin kullanıcısı oluşturuldu.");
+        }
     }
     catch (Exception ex)
     {

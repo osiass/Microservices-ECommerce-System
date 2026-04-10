@@ -37,11 +37,14 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.Authent
 builder.Services.AddScoped<WebUI.Providers.CustomAuthStateProvider>(sp => (WebUI.Providers.CustomAuthStateProvider)sp.GetRequiredService<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider>());
 
 
+// 401 geldiğinde otomatik login'e yönlendiren handler
+builder.Services.AddTransient<AuthRedirectHandler>();
+
 // API Gateway istemcisi - Aspire Service Discovery ile servis isminden adresi çözer
 builder.Services.AddHttpClient("GatewayClient", client =>
 {
     client.BaseAddress = new Uri("http://gateway");
-});
+}).AddHttpMessageHandler<AuthRedirectHandler>();
 
 var app = builder.Build();
 

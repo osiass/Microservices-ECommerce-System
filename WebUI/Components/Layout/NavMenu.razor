@@ -1,6 +1,9 @@
 @using Blazored.LocalStorage
+@using Common.DTOs
+@implements IDisposable
 @inject ILocalStorageService LocalStore
 @inject NavigationManager Nav
+@inject BasketService BasketService
 
 <nav class="navbar navbar-expand-lg premium-nav sticky-top">
     <div class="container py-2">
@@ -17,13 +20,27 @@
                 <li class="nav-item">
                     <NavLink class="nav-link premium-link" href="" Match="NavLinkMatch.All">Ana Sayfa</NavLink>
                 </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link premium-link" href="products">Urunler</NavLink>
+                </li>
             </ul>
             
             <div class="d-flex align-items-center gap-4">
                 <NavLink class="basket-link position-relative" href="basket">
                     <i class="bi bi-handbag-fill fs-4"></i>
-                    <span class="basket-badge">!</span>
+                    @if (basketItemCount > 0)
+                    {
+                        <span class="basket-badge">@basketItemCount</span>
+                    }
                 </NavLink>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <NavLink class="basket-link" href="my-orders" title="Siparişlerim">
+                            <i class="bi bi-box-seam fs-4"></i>
+                        </NavLink>
+                    </Authorized>
+                </AuthorizeView>
 
                 <AuthorizeView>
                     <Authorized>
@@ -176,13 +193,57 @@
 @code {
     [Inject] private WebUI.Providers.CustomAuthStateProvider AuthProvider { get; set; } = default!;
 
+    private int basketItemCount = 0;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Event'e abone ol — sepet değişince badge anında güncellenir
+            BasketService.OnBasketChanged += HandleBasketChanged;
+            await LoadBasketCount();
+        }
+    }
+
+    private void HandleBasketChanged(int count)
+    {
+        basketItemCount = count;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadBasketCount()
+    {
+        try
+        {
+            var token = await LocalStore.GetItemAsync<string>("authToken");
+            var userName = await LocalStore.GetItemAsync<string>("userName");
+
+            if (string.IsNullOrEmpty(userName))
+                userName = await LocalStore.GetItemAsync<string>("guestId");
+
+            if (!string.IsNullOrEmpty(userName))
+            {
+                var basket = await BasketService.GetBasket(token ?? "", userName);
+                basketItemCount = basket?.Items?.Sum(x => x.Quantity) ?? 0;
+                StateHasChanged();
+            }
+        }
+        catch { basketItemCount = 0; }
+    }
+
     private async Task Logout()
     {
         await LocalStore.RemoveItemAsync("authToken");
         await LocalStore.RemoveItemAsync("userName");
         await LocalStore.RemoveItemAsync("userRole");
+        basketItemCount = 0;
         AuthProvider.NotifyUserLogout();
         Nav.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        BasketService.OnBasketChanged -= HandleBasketChanged;
     }
 }
 

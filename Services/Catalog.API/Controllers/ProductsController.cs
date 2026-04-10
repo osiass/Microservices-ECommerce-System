@@ -87,6 +87,15 @@ public class ProductsController : ControllerBase
             product.ImageUrl = await SaveImageAsync(productDto.ImageFile);
         }
 
+        // Ek resimler
+        if (productDto.AdditionalImageFiles != null)
+        {
+            foreach (var file in productDto.AdditionalImageFiles)
+            {
+                product.ImageUrls.Add(await SaveImageAsync(file));
+            }
+        }
+
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
 
@@ -141,6 +150,15 @@ public class ProductsController : ControllerBase
         if (productDto.ImageFile != null)
         {
             product.ImageUrl = await SaveImageAsync(productDto.ImageFile);
+        }
+
+        // Ek resimler
+        if (productDto.AdditionalImageFiles != null)
+        {
+            foreach (var file in productDto.AdditionalImageFiles)
+            {
+                product.ImageUrls.Add(await SaveImageAsync(file));
+            }
         }
 
         await _context.SaveChangesAsync();
@@ -231,9 +249,12 @@ public class ProductsController : ControllerBase
         Category = p.Category,
         Description = p.Description,
         ImageUrl = p.ImageUrl,
+        ImageUrls = p.ImageUrls,
         Price = p.Price,
         StockQuantity = p.StockQuantity,
-        Features = p.Features
+        Features = p.Features,
+        Rating = p.Rating,
+        ReviewCount = p.ReviewCount
     };
 
     private async Task PublishProductCreated(Product product)

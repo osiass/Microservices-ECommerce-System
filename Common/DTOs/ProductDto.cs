@@ -17,7 +17,8 @@ public class ProductDto
     
     public string? Description { get; set; }
     public string? ImageUrl { get; set; }
-    
+    public List<string>? ImageUrls { get; set; }
+
     [Required(ErrorMessage = "Fiyat zorunludur.")]
     [Range(0.1, 1000000, ErrorMessage = "Fiyat 0.1 ile 1.000.000 arasında olmalıdır.")]
     public decimal Price { get; set; }
@@ -31,4 +32,5 @@ public class ProductDto
     public int ReviewCount { get; set; }
     
     public IFormFile? ImageFile { get; set; }
+    public List<IFormFile>? AdditionalImageFiles { get; set; }
 }

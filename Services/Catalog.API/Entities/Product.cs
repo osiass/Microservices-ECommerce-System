@@ -11,6 +11,7 @@ public class Product : BaseEntity
     public decimal Price { get; set; }
     public int StockQuantity { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
+    public List<string> ImageUrls { get; set; } = new();
     public double Rating { get; set; }
     public int ReviewCount { get; set; }
     public List<string> Features { get; set; } = new();

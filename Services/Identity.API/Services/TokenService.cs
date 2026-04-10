@@ -26,7 +26,8 @@ namespace Identity.API.Services
                 new Claim(ClaimTypes.Role, user.Role ?? "User")
             };
             // şifreleme anahtarını oluştur 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+                _configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured. Set the 'Jwt__Key' environment variable.")));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             //token özellikleri belirleme
             var tokenDescriptor = new SecurityTokenDescriptor

@@ -61,7 +61,7 @@ namespace WebUI.Services
                 return null;
             }
         }
-        public async Task<bool> CreateProduct(string token, ProductDto product, IBrowserFile? file = null)
+        public async Task<bool> CreateProduct(string token, ProductDto product, IBrowserFile? file = null, List<IBrowserFile>? additionalFiles = null)
         {
             try
             {
@@ -86,6 +86,17 @@ namespace WebUI.Services
                     var streamContent = new StreamContent(stream);
                     streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
                     content.Add(streamContent, "ImageFile", file.Name);
+                }
+
+                if (additionalFiles != null)
+                {
+                    foreach (var af in additionalFiles)
+                    {
+                        var afStream = af.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                        var afContent = new StreamContent(afStream);
+                        afContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(af.ContentType);
+                        content.Add(afContent, "AdditionalImageFiles", af.Name);
+                    }
                 }
 
                 var request = new HttpRequestMessage(HttpMethod.Post, "/catalog/api/products");
@@ -132,7 +143,7 @@ namespace WebUI.Services
             }
         }
 
-        public async Task<bool> UpdateProduct(string token, ProductDto product, IBrowserFile? file = null)
+        public async Task<bool> UpdateProduct(string token, ProductDto product, IBrowserFile? file = null, List<IBrowserFile>? additionalFiles = null)
         {
             try
             {
@@ -157,6 +168,17 @@ namespace WebUI.Services
                     var streamContent = new StreamContent(stream);
                     streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
                     content.Add(streamContent, "ImageFile", file.Name);
+                }
+
+                if (additionalFiles != null)
+                {
+                    foreach (var af in additionalFiles)
+                    {
+                        var afStream = af.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                        var afContent = new StreamContent(afStream);
+                        afContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(af.ContentType);
+                        content.Add(afContent, "AdditionalImageFiles", af.Name);
+                    }
                 }
 
                 var request = new HttpRequestMessage(HttpMethod.Put, $"/catalog/api/products/{product.Id}");

@@ -8,6 +8,10 @@ public class BasketService
 {
     private readonly HttpClient _httpClient;
 
+    // Sepet değiştiğinde badge'i güncellemek için event
+    public event Action<int>? OnBasketChanged;
+    public void NotifyBasketChanged(int itemCount) => OnBasketChanged?.Invoke(itemCount);
+
     public BasketService(IHttpClientFactory httpClientFactory)
     {
         // Gateway üzerinden gidecek olan aracımızı alıyoruz
@@ -50,7 +54,7 @@ public class BasketService
             
             // PATH üzerinden siliyoruz artık
             var response = await _httpClient.DeleteAsync($"/basket/api/basket/{cleanedUser}");
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
@@ -58,6 +62,7 @@ public class BasketService
                 Console.WriteLine($"[BasketService] Sepet silme hatası: {cleanError}");
                 return (false, cleanError);
             }
+            NotifyBasketChanged(0);
             return (true, "Success");
         }
         catch (Exception ex)
@@ -96,6 +101,11 @@ public class BasketService
                 var cleanError = CleanJsonError(content) ?? $"{response.ReasonPhrase}";
                 return (false, cleanError);
             }
+
+            // Badge'i anında güncelle
+            var basket = await GetBasket(token, userName);
+            NotifyBasketChanged(basket?.Items?.Sum(x => x.Quantity) ?? 0);
+
             return (true, "");
         }
         catch (Exception ex)
@@ -118,6 +128,7 @@ public class BasketService
                 _httpClient.DefaultRequestHeaders.Authorization = null;
             }
             await _httpClient.PostAsJsonAsync("/basket/api/basket", cart);
+            NotifyBasketChanged(cart.Items?.Sum(x => x.Quantity) ?? 0);
         }
         catch (Exception ex)
         {
