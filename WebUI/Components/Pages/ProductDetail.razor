@@ -21,9 +21,9 @@ else
         <div class="container pt-4 pb-5">
             <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
-                <ol class="breadcrumb glass-breadcrumb px-3 py-2 rounded-pill">
-                    <li class="breadcrumb-item"><a href="/">Ana Sayfa</a></li>
-                    <li class="breadcrumb-item active text-white">@product.Name</li>
+                <ol class="breadcrumb px-0 py-2 border-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Ana Sayfa</a></li>
+                    <li class="breadcrumb-item active fw-bold">@product.Name</li>
                 </ol>
             </nav>
 
@@ -32,7 +32,7 @@ else
                 <div class="col-lg-6">
                     <!-- Ana Gorsel + Ok Butonlari -->
                     <div class="gallery-main-wrapper position-relative mb-3">
-                        <div class="glass-card product-main-img-card overflow-hidden">
+                        <div class="product-main-img-card overflow-hidden">
                             @if (!string.IsNullOrEmpty(selectedImage))
                             {
                                 <img src="@CatalogService.GetFullImageUrl(selectedImage)" class="img-fluid w-100 detail-img" alt="@product.Name">
@@ -76,8 +76,8 @@ else
 
                     @if (product.Features != null && product.Features.Any())
                     {
-                        <div class="glass-card p-4 animate-up">
-                            <h5 class="fw-bold mb-3 text-gradient">Teknik Özellikler</h5>
+                        <div class="bg-white border p-4 rounded-4 mb-4">
+                            <h5 class="fw-black mb-3">Teknik Özellikler</h5>
                             <div class="row g-3">
                                 @foreach (var feature in product.Features)
                                 {
@@ -99,7 +99,7 @@ else
                         <span class="badge category-badge-premium mb-3">@product.Category</span>
                         <h1 class="display-5 fw-bold mb-3">@product.Name</h1>
                         
-                        <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-white border-opacity-10">
+                        <div class="d-flex align-items-center mb-4 pb-2 border-bottom border">
                             <div class="rating-box-premium me-3">
                                 @for (int i = 1; i <= 5; i++)
                                 {
@@ -137,7 +137,7 @@ else
                                     }
                                 </div>
                             </div>
-                            <h2 class="display-6 fw-bold text-gradient">@product.Price.ToString("C2")</h2>
+                            <h2 class="display-6 fw-black">@product.Price.ToString("C2")</h2>
                         </div>
 
                         <p class="product-description-premium mb-5">@product.Description</p>
@@ -162,7 +162,7 @@ else
                                     <i class="bi bi-x-circle me-2"></i> Stokta Yok
                                 </button>
                             }
-                            <button class="btn btn-outline-light btn-lg rounded-4 opacity-75" @onclick='@(() => NavigationManager.NavigateTo("/"))'>
+                            <button class="btn btn-outline-dark btn-lg rounded-pill" @onclick='@(() => NavigationManager.NavigateTo("/"))'>
                                 <i class="bi bi-arrow-left me-2"></i> Keşfe Devam Et
                             </button>
                         </div>
@@ -192,7 +192,7 @@ else
             </div>
 
             <!-- Comments Section -->
-            <div class="mt-5 pt-5 border-top border-white border-opacity-10">
+            <div class="mt-5 pt-5 border-top border">
                 <div class="row">
                     <div class="col-lg-8 mx-auto">
                         <div class="d-flex justify-content-between align-items-center mb-5">
@@ -248,7 +248,7 @@ else
                                             </div>
                                             <span class="text-muted small">@comment.CreatedDate.ToLocalTime().ToString("dd MMM yyyy")</span>
                                         </div>
-                                        <p class="mb-0 text-white text-opacity-75">@comment.Content</p>
+                                        <p class="mb-0 text-muted">@comment.Content</p>
                                     </div>
                                 }
                             </div>

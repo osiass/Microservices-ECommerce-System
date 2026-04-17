@@ -12,9 +12,9 @@
     <div class="admin-header">
         <div>
             <h2 class="admin-title"><i class="bi bi-speedometer2 me-2 text-primary"></i> Yönetim Paneli</h2>
-            <div class="admin-subtitle text-white-50">Sistem genelindeki satış ve stok verilerini takip edin.</div>
+            <div class="admin-subtitle text-muted">Sistem genelindeki satış ve stok verilerini takip edin.</div>
         </div>
-        <div class="text-white-50 small text-end">
+        <div class="text-muted small text-end">
             <i class="bi bi-clock me-1"></i> Son Güncelleme: @DateTime.Now.ToString("HH:mm")
         </div>
     </div>
@@ -63,7 +63,7 @@
                             <i class="bi bi-currency-dollar fs-2 text-primary"></i>
                         </div>
                         <div>
-                            <div class="small text-white-50">Toplam Ciro</div>
+                            <div class="small text-muted">Toplam Ciro</div>
                             <div class="fs-3 fw-bold">@totalRevenue.ToString("C0")</div>
                         </div>
                     </div>
@@ -79,7 +79,7 @@
                             <i class="bi bi-bag-check fs-2 text-success"></i>
                         </div>
                         <div>
-                            <div class="small text-white-50">Sipariş Sayısı</div>
+                            <div class="small text-muted">Sipariş Sayısı</div>
                             <div class="fs-3 fw-bold">@orders.Count</div>
                         </div>
                     </div>
@@ -95,7 +95,7 @@
                             <i class="bi bi-box-seam fs-2 text-info"></i>
                         </div>
                         <div>
-                            <div class="small text-white-50">Toplam Ürün</div>
+                            <div class="small text-muted">Toplam Ürün</div>
                             <div class="fs-3 fw-bold">@products.Count</div>
                         </div>
                     </div>
@@ -111,7 +111,7 @@
                             <i class="bi bi-exclamation-triangle fs-2 text-warning"></i>
                         </div>
                         <div>
-                            <div class="small text-white-50">Kritik Stok (&lt;10)</div>
+                            <div class="small text-muted">Kritik Stok (&lt;10)</div>
                             <div class="fs-3 fw-bold">@lowStockCount</div>
                         </div>
                     </div>
@@ -131,9 +131,9 @@
                         <a href="/admin/orders" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold">Tümünü Gör</a>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover mb-0 align-middle">
-                            <thead class="text-white-50 small text-uppercase">
-                                <tr class="border-bottom border-white border-opacity-10">
+                        <table class="table w-100 table-hover mb-0 align-middle">
+                            <thead class="text-muted small text-uppercase">
+                                <tr class="border-bottom border">
                                     <th class="ps-0 py-3 border-0">Müşteri</th>
                                     <th class="border-0">Durum</th>
                                     <th class="border-0">Tarih</th>
@@ -145,7 +145,7 @@
                                 @if (!orders.Any())
                                 {
                                     <tr>
-                                        <td colspan="5" class="text-center py-5 text-white-50">
+                                        <td colspan="5" class="text-center py-5 text-muted">
                                             <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
                                             Henüz sipariş bulunmuyor.
                                         </td>
@@ -155,14 +155,14 @@
                                 {
                                     @foreach (var order in orders.Take(5))
                                     {
-                                        <tr class="border-bottom border-white border-opacity-5">
+                                        <tr class="border-bottom border">
                                             <td class="ps-0 py-3 fw-semibold">@order.UserName</td>
                                             <td>
                                                 <span class="badge @order.Status.ToStatusClass() rounded-pill px-3 py-2" style="font-size: 0.7rem;">
                                                     @order.Status.ToStatusText()
                                                 </span>
                                             </td>
-                                            <td class="text-white-50 small">@order.CreatedDate.ToLocalTime().ToString("g")</td>
+                                            <td class="text-muted small">@order.CreatedDate.ToLocalTime().ToString("g")</td>
                                             <td class="text-primary fw-bold">@order.TotalPrice.ToString("C")</td>
                                             <td class="text-end pe-0">
                                                 <button class="btn btn-sm btn-primary bg-opacity-10 text-primary border-primary border-opacity-25 rounded-pill px-3" @onclick='() => NavigationManager.NavigateTo($"/order-detail/{order.Id}")'>
@@ -188,10 +188,10 @@
                         {
                             <div class="mb-4">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small fw-semibold text-white-50">@p.Name</span>
+                                    <span class="small fw-semibold text-muted">@p.Name</span>
                                     <span class="badge bg-danger bg-opacity-25 text-danger rounded-pill">@p.StockQuantity Adet</span>
                                 </div>
-                                <div class="progress bg-white bg-opacity-10" style="height: 8px; border-radius: 10px;">
+                                <div class="progress bg-light" style="height: 8px; border-radius: 10px;">
                                     <div class="progress-bar bg-danger shadow-sm" style="width: @(Math.Min(100, p.StockQuantity * 10))%; border-radius: 10px;"></div>
                                 </div>
                             </div>
@@ -203,7 +203,7 @@
                             <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3 mx-auto">
                                 <i class="bi bi-shield-check fs-1 text-success"></i>
                             </div>
-                            <p class="text-white-50 mb-0">Tüm stoklar yeterli düzeyde!</p>
+                            <p class="text-muted mb-0">Tüm stoklar yeterli düzeyde!</p>
                         </div>
                     }
                 </div>

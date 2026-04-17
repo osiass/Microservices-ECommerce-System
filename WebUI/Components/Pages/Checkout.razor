@@ -28,7 +28,7 @@
                         @foreach (var item in basket.Items)
                         {
                             <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10 flex-shrink-0" style="width: 50px; height: 50px; overflow: hidden;">
+                                <div class="rounded-3 bg-light border border flex-shrink-0" style="width: 50px; height: 50px; overflow: hidden;">
                                     @if (!string.IsNullOrEmpty(item.ImageUrl))
                                     {
                                         <img src="@CatalogService.GetFullImageUrl(item.ImageUrl)" class="w-100 h-100 object-fit-cover" alt="@item.ProductName" />
@@ -36,7 +36,7 @@
                                     else
                                     {
                                         <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-box-seam text-white-50"></i>
+                                            <i class="bi bi-box-seam text-muted"></i>
                                         </div>
                                     }
                                 </div>
@@ -49,7 +49,7 @@
                         }
                     </div>
 
-                    <div class="border-top border-white border-opacity-10 pt-3">
+                    <div class="border-top border pt-3">
                         <div class="d-flex justify-content-between text-muted small mb-2">
                             <span>Ürün Adedi</span>
                             <span>@basket.Items.Sum(x => x.Quantity) adet</span>
@@ -84,12 +84,12 @@
                 <div class="mb-4">
                     <label class="form-label fw-bold small text-uppercase opacity-50 mb-2">Teslimat Adresi</label>
                     <div class="position-relative">
-                        <i class="bi bi-geo-alt position-absolute top-50 start-0 translate-middle-y ms-3 text-primary-glow"></i>
+                        <i class="bi bi-geo-alt position-absolute top-50 start-0 translate-middle-y ms-3 text-primary"></i>
                         <input @bind="address" @bind:after="SaveAddress" class="form-control glass-input ps-5" placeholder="Sokak, No, Kat, Daire..." />
                     </div>
                 </div>
 
-                <div class="border-top border-white border-opacity-10 my-5 pt-1"></div>
+                <div class="border-top border my-5 pt-1"></div>
 
                 <!-- Kart Bilgileri -->
                 <div class="payment-section">

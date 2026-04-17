@@ -5,63 +5,79 @@
 @inject Blazored.LocalStorage.ILocalStorageService LocalStore
 @inject NavigationManager Nav
 @inject ToastService ToastService
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<div class="profile-container animate-fade-in">
-    <div class="glass-card">
-        <div class="profile-header">
-            <div class="avatar-circle">
-                <span>@userProfile?.UserName?.Substring(0, 1).ToUpper()</span>
-            </div>
-            <h2 class="profile-name">@userProfile?.UserName</h2>
-            <span class="profile-role">@userProfile?.Role</span>
-        </div>
+<div class="auth-page py-5 animate-fade-in">
+    <div class="profile-wrap">
 
         @if (isLoading)
         {
-            <div class="loader-container">
-                <div class="spinner"></div>
-                <p>Profil bilgileriniz yükleniyor...</p>
+            <div class="text-center py-5">
+                <div class="spinner-border text-dark mb-3"></div>
+                <p class="text-muted">Profil yükleniyor...</p>
             </div>
         }
         else
         {
-            <div class="profile-sections">
-                <!-- Hesap Bilgileri -->
-                <div class="profile-section">
-                    <h4 class="section-title"><i class="bi bi-person-fill me-2"></i>Hesap Bilgileri</h4>
-                    <div class="form-group mb-3">
-                        <label>E-posta Adresi</label>
-                        <input type="email" class="form-control glass-input" @bind="updateDto.Email" placeholder="E-posta adresiniz" />
-                    </div>
-                    <button class="btn btn-premium w-100" @onclick="HandleUpdateProfile" disabled="@isSaving">
-                        @if (isSaving) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                        Bilgileri Güncelle
-                    </button>
+            <!-- Avatar Header -->
+            <div class="profile-hero mb-4">
+                <div class="profile-avatar">
+                    <span>@(userProfile?.UserName?.Substring(0, 1).ToUpper() ?? "?")</span>
                 </div>
-
-                <hr class="glass-hr" />
-
-                <!-- Şifre Değiştirme -->
-                <div class="profile-section">
-                    <h4 class="section-title"><i class="bi bi-shield-lock-fill me-2"></i>Güvenlik</h4>
-                    <div class="form-group mb-3">
-                        <label>Yeni Şifre</label>
-                        <input type="password" class="form-control glass-input" @bind="updateDto.NewPassword" placeholder="Boş bırakırsanız değişmez" />
-                    </div>
-                    <div class="form-group mb-4">
-                        <label>Yeni Şifre (Tekrar)</label>
-                        <input type="password" class="form-control glass-input" @bind="confirmPassword" placeholder="Şifreyi onaylayın" />
-                    </div>
-                    <button class="btn btn-outline-premium w-100" @onclick="HandleUpdatePassword" disabled="@isSaving">
-                        Şifreyi Değiştir
-                    </button>
+                <div>
+                    <h3 class="fw-bold mb-0" style="letter-spacing:-0.04em;">@userProfile?.UserName</h3>
+                    <span class="role-badge">@userProfile?.Role</span>
                 </div>
             </div>
+
+            <!-- Hesap Bilgileri -->
+            <div class="auth-card mb-4">
+                <h5 class="profile-section-title"><i class="bi bi-person-fill me-2"></i>Hesap Bilgileri</h5>
+                <div class="mb-3">
+                    <label class="auth-label">Kullanıcı Adı</label>
+                    <div class="auth-input-wrap">
+                        <i class="bi bi-person auth-input-icon"></i>
+                        <input type="text" class="auth-input" value="@userProfile?.UserName" disabled />
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="auth-label">E-posta Adresi</label>
+                    <div class="auth-input-wrap">
+                        <i class="bi bi-envelope auth-input-icon"></i>
+                        <input type="email" class="auth-input" @bind="updateDto.Email" placeholder="E-posta adresiniz" />
+                    </div>
+                </div>
+                <button class="btn btn-primary w-100 py-2" @onclick="HandleUpdateProfile" disabled="@isSaving">
+                    @if (isSaving) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                    Bilgileri Güncelle
+                </button>
+            </div>
+
+            <!-- Şifre Değiştirme -->
+            <div class="auth-card">
+                <h5 class="profile-section-title"><i class="bi bi-shield-lock-fill me-2"></i>Şifre Değiştir</h5>
+                <div class="mb-3">
+                    <label class="auth-label">Yeni Şifre</label>
+                    <div class="auth-input-wrap">
+                        <i class="bi bi-lock auth-input-icon"></i>
+                        <input type="password" class="auth-input" @bind="updateDto.NewPassword" placeholder="Boş bırakırsanız değişmez" />
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="auth-label">Yeni Şifre (Tekrar)</label>
+                    <div class="auth-input-wrap">
+                        <i class="bi bi-lock-fill auth-input-icon"></i>
+                        <input type="password" class="auth-input" @bind="confirmPassword" placeholder="Şifreyi onaylayın" />
+                    </div>
+                </div>
+                <button class="btn btn-outline-dark w-100 py-2" @onclick="HandleUpdatePassword" disabled="@isSaving">
+                    Şifreyi Değiştir
+                </button>
+            </div>
         }
+
     </div>
 </div>
-
-
 
 @code {
     private UserProfileDto? userProfile;
@@ -90,25 +106,22 @@
     private async Task HandleUpdateProfile()
     {
         if (userProfile == null) return;
-        
+
         isSaving = true;
         var success = await AuthService.UpdateProfile(userProfile.UserName, new UpdateProfileDto { Email = updateDto.Email });
-        
+
         if (success)
-        {
             ToastService.Notify("Profil başarıyla güncellendi!", ToastLevel.Success);
-        }
         else
-        {
             ToastService.Notify("Güncelleme sırasında bir hata oluştu.", ToastLevel.Error);
-        }
+
         isSaving = false;
     }
 
     private async Task HandleUpdatePassword()
     {
         if (userProfile == null) return;
-        
+
         if (string.IsNullOrWhiteSpace(updateDto.NewPassword))
         {
             ToastService.Notify("Lütfen yeni bir şifre girin.", ToastLevel.Warning);
@@ -122,10 +135,10 @@
         }
 
         isSaving = true;
-        var success = await AuthService.UpdateProfile(userProfile.UserName, new UpdateProfileDto 
-        { 
+        var success = await AuthService.UpdateProfile(userProfile.UserName, new UpdateProfileDto
+        {
             Email = updateDto.Email,
-            NewPassword = updateDto.NewPassword 
+            NewPassword = updateDto.NewPassword
         });
 
         if (success)

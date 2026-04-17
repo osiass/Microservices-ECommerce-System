@@ -10,9 +10,9 @@
     <div class="admin-header">
         <div>
             <h2 class="admin-title"><i class="bi bi-bag-check me-2 text-primary"></i> Sipariş Yönetimi</h2>
-            <p class="admin-subtitle text-white-50">Sistemdeki tüm siparişlerin durumunu ve detaylarını yönetin.</p>
+            <p class="admin-subtitle text-muted">Sistemdeki tüm siparişlerin durumunu ve detaylarını yönetin.</p>
         </div>
-        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 rounded-pill px-4 py-2 fw-bold">
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border rounded-pill px-4 py-2 fw-bold">
             @orders.Count Toplam Sipariş
         </span>
     </div>
@@ -30,9 +30,9 @@
     {
         <div class="admin-card border-0 p-0 overflow-hidden">
             <div class="table-responsive text-nowrap">
-                <table class="table table-dark table-hover align-middle mb-0">
-                    <thead class="text-white-50 small text-uppercase" style="background: rgba(255,255,255,0.02);">
-                        <tr class="border-bottom border-white border-opacity-10">
+                <table class="table w-100 table-hover align-middle mb-0">
+                    <thead class="text-muted small text-uppercase" >
+                        <tr class="border-bottom border">
                             <th class="ps-4 py-3 border-0">Sipariş ID</th>
                             <th class="py-3 border-0">Müşteri</th>
                             <th class="py-3 border-0">Tarih</th>
@@ -44,7 +44,7 @@
                         @if (orders == null || !orders.Any())
                         {
                             <tr>
-                                <td colspan="5" class="text-center py-5 text-white-50">
+                                <td colspan="5" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
                                     Henüz sipariş bulunmuyor.
                                 </td>
@@ -54,7 +54,7 @@
                         {
                             @foreach (var order in orders)
                             {
-                                <tr class="border-bottom border-white border-opacity-5">
+                                <tr class="border-bottom border">
                                     <td class="ps-4">
                                         <code class="text-primary smaller bg-primary bg-opacity-10 px-2 py-1 rounded">#@order.Id.ToString().PadLeft(5, '0')</code>
                                     </td>
@@ -66,7 +66,7 @@
                                             <span class="fw-semibold">@order.UserName</span>
                                         </div>
                                     </td>
-                                    <td class="text-white-50 small">@order.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+                                    <td class="text-muted small">@order.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
                                     <td>
                                         <div class="fw-bold text-primary">@order.TotalPrice.ToString("C")</div>
                                         @if(order.Discount > 0)
