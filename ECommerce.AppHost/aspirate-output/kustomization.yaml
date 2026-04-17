@@ -1,0 +1,20 @@
+resources:
+- messaging
+- catalog-api
+- discount-api
+- identity-api
+- basket-api
+- payment-api
+- order-api
+- inventory-api
+- gateway
+- web-ui
+- dashboard.yaml
+- postgres-databases.yaml
+- db-pvcs.yaml
+- db-init-configmaps.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+

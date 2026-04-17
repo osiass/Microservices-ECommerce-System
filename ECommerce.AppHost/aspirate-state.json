@@ -1,0 +1,24 @@
+{
+  "projectPath": ".",
+  "outputPath": "aspirate-output",
+  "containerRegistry": "localhost:5000",
+  "containerImageTags": [
+    "latest"
+  ],
+  "imagePullPolicy": "IfNotPresent",
+  "containerBuilder": "docker",
+  "outputFormat": "kustomize",
+  "disableSecrets": true,
+  "privateRegistryEmail": "aspir8@aka.ms",
+  "includeDashboard": true,
+  "useCustomNamespace": true,
+  "secrets": {
+    "salt": "IVRgxV6Ex8ORE0tU",
+    "hash": "YLTnmLzxE8mxWVlwgD60SjDjqaIP3gkklOBTbdr1Nyg=",
+    "secrets": {
+      "messaging-password": {
+        "value": "IVRgxV6Ex8ORE0tU5LBZSyvzJbVVGxjKAEfLPaf0ENylNAXjlMxHLthVc84M3ujDw88="
+      }
+    }
+  }
+}

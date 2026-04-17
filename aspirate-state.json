@@ -1,0 +1,13 @@
+{
+  "inputPath": "aspirate-output",
+  "containerImageTags": [
+    "latest"
+  ],
+  "kubeContext": "docker-desktop",
+  "outputFormat": "docker",
+  "secrets": {
+    "salt": "KxS1Anv5a5yUI2kT",
+    "hash": "ckS3qIQlEK6vD8NIldisK9SWWma2GptygIAb2epvzDM=",
+    "secrets": {}
+  }
+}

@@ -3,8 +3,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 // Altyapı Bileşenleri
 var rabbitmq = builder.AddRabbitMQ("messaging");
 
-// JWT Secret Key - tek noktadan yönetilir, servisler env variable olarak alır
-var jwtKey = builder.AddParameter("jwt-key", secret: true);
+// JWT Secret Key - 32 karakter tam uyumlu
+var jwtKey = "ThisSecureKeyIsExactly32CharsLong!";
 
 // Servisleri tanımla
 var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
@@ -41,6 +41,8 @@ builder.AddProject<Projects.WebUI>("web-ui")
     .WithReference(gateway)
     .WithReference(catalogApi)
     .WithReference(basketApi)
-    .WithReference(orderApi);
+    .WithReference(orderApi)
+    .WithHttpEndpoint(port: 8081, name: "web-8081")
+    .WithEnvironment("GatewayExternalUrl", "http://localhost:8080");
 
 builder.Build().Run();
