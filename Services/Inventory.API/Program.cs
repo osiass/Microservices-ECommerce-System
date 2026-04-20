@@ -82,17 +82,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Veritabanını otomatik oluştur ve stokları ekle
 using (var scope = app.Services.CreateScope())
 {
-    try
+    var context = scope.ServiceProvider.GetRequiredService<InventoryContext>();
+    for (int attempt = 1; attempt <= 10; attempt++)
     {
-        var context = scope.ServiceProvider.GetRequiredService<InventoryContext>();
-        await context.Database.MigrateAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Inventory.API] Startup error: {ex.Message}");
+        try
+        {
+            await context.Database.MigrateAsync();
+            Console.WriteLine("[Inventory.API] Migration tamamlandı.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Inventory.API] Migration denemesi {attempt}/10 başarısız: {ex.Message}");
+            if (attempt == 10) Console.WriteLine("[Inventory.API] Migration başarısız, devam ediliyor.");
+            else await Task.Delay(3000);
+        }
     }
 }
 

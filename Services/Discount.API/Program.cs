@@ -69,17 +69,24 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Veritabanını otomatik oluştur ve verileri ekle
+// Veritabanı hazır olana kadar retry ile migration
 using (var scope = app.Services.CreateScope())
 {
-    try 
+    var context = scope.ServiceProvider.GetRequiredService<DiscountContext>();
+    for (int attempt = 1; attempt <= 10; attempt++)
     {
-        var context = scope.ServiceProvider.GetRequiredService<DiscountContext>();
-        await context.Database.MigrateAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Discount.API] Startup error: {ex.Message}");
+        try
+        {
+            await context.Database.MigrateAsync();
+            Console.WriteLine("[Discount.API] Migration tamamlandı.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Discount.API] Migration denemesi {attempt}/10 başarısız: {ex.Message}");
+            if (attempt == 10) Console.WriteLine("[Discount.API] Migration başarısız, devam ediliyor.");
+            else await Task.Delay(3000);
+        }
     }
 }
 

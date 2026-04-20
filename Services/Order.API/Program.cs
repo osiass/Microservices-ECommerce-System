@@ -63,21 +63,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Veritabanını otomatik oluştur ve migrasyonları uygula
 using (var scope = app.Services.CreateScope())
 {
-    try 
+    var context = scope.ServiceProvider.GetRequiredService<OrderContext>();
+    for (int attempt = 1; attempt <= 10; attempt++)
     {
-        var context = scope.ServiceProvider.GetRequiredService<OrderContext>();
-        
-        await context.Database.MigrateAsync();
-        
-        Console.WriteLine("[Order.API] Migrasyonlar başarıyla uygulandı ve veritabanı güncellendi.");
-    }
-    catch (Exception ex)
-    {
-        var fullError = ex.Message + (ex.InnerException != null ? (" | Inner: " + ex.InnerException.Message) : "");
-        Console.WriteLine($"[Order.API] Startup error: {fullError}");
+        try
+        {
+            await context.Database.MigrateAsync();
+            Console.WriteLine("[Order.API] Migration tamamlandı.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Order.API] Migration denemesi {attempt}/10 başarısız: {ex.Message}");
+            if (attempt == 10) Console.WriteLine("[Order.API] Migration başarısız, devam ediliyor.");
+            else await Task.Delay(3000);
+        }
     }
 }
 

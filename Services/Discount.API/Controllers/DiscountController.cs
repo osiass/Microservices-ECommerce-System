@@ -31,6 +31,7 @@ namespace Discount.API.Controllers
         }
 
         [HttpGet("{code}")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CouponDto))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<CouponDto>> GetDiscount(string code)

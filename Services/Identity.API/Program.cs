@@ -31,32 +31,36 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Veritabanı Otomatik Güncelleme ve Admin Tanımlama
 using (var scope = app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
-    try
+    var context = scope.ServiceProvider.GetRequiredService<IdentityContext>();
+    for (int attempt = 1; attempt <= 10; attempt++)
     {
-        var context = services.GetRequiredService<IdentityContext>();
-        await context.Database.MigrateAsync();
-
-        // Admin seed - yoksa otomatik oluştur
-        if (!await context.AppUsers.AnyAsync(u => u.Role == "Admin"))
+        try
         {
-            context.AppUsers.Add(new Identity.API.Entities.AppUser
+            await context.Database.MigrateAsync();
+            Console.WriteLine("[Identity.API] Migration tamamlandı.");
+
+            if (!await context.AppUsers.AnyAsync(u => u.Role == "Admin"))
             {
-                UserName = "admin",
-                Email = "admin@ecommerce.com",
-                Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                Role = "Admin"
-            });
-            await context.SaveChangesAsync();
-            Console.WriteLine("[Identity.API] Admin kullanıcısı oluşturuldu.");
+                context.AppUsers.Add(new Identity.API.Entities.AppUser
+                {
+                    UserName = "admin",
+                    Email = "admin@ecommerce.com",
+                    Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                    Role = "Admin"
+                });
+                await context.SaveChangesAsync();
+                Console.WriteLine("[Identity.API] Admin kullanıcısı oluşturuldu.");
+            }
+            break;
         }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Identity.API] Veritabanı güncelleme/seed hatası: {ex.Message}");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Identity.API] Migration denemesi {attempt}/10 başarısız: {ex.Message}");
+            if (attempt == 10) Console.WriteLine("[Identity.API] Migration başarısız, devam ediliyor.");
+            else await Task.Delay(3000);
+        }
     }
 }
 

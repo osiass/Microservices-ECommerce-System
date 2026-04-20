@@ -55,22 +55,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Veritabanını otomatik oluştur ve migrasyonları uygula
 using (var scope = app.Services.CreateScope())
 {
-    try 
+    var context = scope.ServiceProvider.GetRequiredService<PaymentContext>();
+    for (int attempt = 1; attempt <= 10; attempt++)
     {
-        var context = scope.ServiceProvider.GetRequiredService<PaymentContext>();
-        
-        // Veritabanını otomatik güncelle
-        await context.Database.MigrateAsync();
-        
-        Console.WriteLine("[Payment.API] Veritabanı başarıyla güncellendi.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Payment.API] Startup error: {ex.Message}");
-        if (ex.InnerException != null) Console.WriteLine($"[Payment.API] Inner error: {ex.InnerException.Message}");
+        try
+        {
+            await context.Database.MigrateAsync();
+            Console.WriteLine("[Payment.API] Migration tamamlandı.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Payment.API] Migration denemesi {attempt}/10 başarısız: {ex.Message}");
+            if (attempt == 10) Console.WriteLine("[Payment.API] Migration başarısız, devam ediliyor.");
+            else await Task.Delay(3000);
+        }
     }
 }
 

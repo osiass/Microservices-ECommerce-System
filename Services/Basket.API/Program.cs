@@ -70,17 +70,23 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Veritabanını otomatik oluştur ve migrasyonları uygula
 using (var scope = app.Services.CreateScope())
 {
-    try 
+    var context = scope.ServiceProvider.GetRequiredService<BasketContext>();
+    for (int attempt = 1; attempt <= 10; attempt++)
     {
-        var context = scope.ServiceProvider.GetRequiredService<BasketContext>();
-        await context.Database.MigrateAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Basket.API] Startup error: {ex.Message}");
+        try
+        {
+            await context.Database.MigrateAsync();
+            Console.WriteLine("[Basket.API] Migration tamamlandı.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Basket.API] Migration denemesi {attempt}/10 başarısız: {ex.Message}");
+            if (attempt == 10) Console.WriteLine("[Basket.API] Migration başarısız, devam ediliyor.");
+            else await Task.Delay(3000);
+        }
     }
 }
 
