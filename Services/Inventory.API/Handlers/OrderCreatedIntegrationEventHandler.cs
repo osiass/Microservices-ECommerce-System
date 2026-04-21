@@ -35,8 +35,7 @@ public class OrderCreatedIntegrationEventHandler : IIntegrationEventHandler<Orde
 
             if (stock != null)
             {
-                //Bulduğumuz kayıttan sipariş edilen adet kadar düş
-                stock.Quantity -= item.Quantity;
+                stock.Quantity = Math.Max(0, stock.Quantity - item.Quantity);
                 _logger.LogInformation("Ürün {ProductId} için stok {Quantity} adet düşürüldü. Yeni stok: {NewCount}", item.ProductId, item.Quantity, stock.Quantity);
                 
                 // Diğer servislere Catalog gibi haber ver

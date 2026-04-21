@@ -1,6 +1,11 @@
 using WebUI.Components;
 using WebUI.Services;
 using Blazored.LocalStorage;
+using System.Globalization;
+
+var trCulture = new CultureInfo("tr-TR");
+CultureInfo.DefaultThreadCurrentCulture = trCulture;
+CultureInfo.DefaultThreadCurrentUICulture = trCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
