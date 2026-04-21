@@ -99,6 +99,15 @@
     background: #F0EEED;
     border: 2px solid transparent;
     border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.gallery-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .gallery-thumb.active {
