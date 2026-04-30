@@ -1,4 +1,4 @@
-resources:
+﻿resources:
 - deployment.yaml
 - service.yaml
 
@@ -13,7 +13,6 @@ configMapGenerator:
     - OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY=in_memory
     - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
     - HTTP_PORTS=8080
-    - Jwt__Key=ThisSecureKeyIsExactly32CharsLong!
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
     - OTEL_SERVICE_NAME=identity-api
     - ASPNETCORE_URLS=http://+:8080;

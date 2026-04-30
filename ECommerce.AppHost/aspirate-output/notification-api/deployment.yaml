@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api
+  labels:
+    app: notification-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-api
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: notification-api
+    spec:
+      containers:
+      - name: notification-api
+        image: localhost:5000/notification-api:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+        envFrom:
+        - configMapRef:
+            name: notification-api-env
+        - secretRef:
+            name: ecommerce-secrets
+      terminationGracePeriodSeconds: 30

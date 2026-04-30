@@ -69,7 +69,7 @@ namespace Identity.API.Controllers
             var tokenService = new TokenService(_configuration);
             var token = tokenService.CreateToken(user);
 
-            return Ok(new { Token = token, Role = user.Role, message = "Giriş başarılı" });
+            return Ok(new { Token = token, Role = user.Role, Email = user.Email, message = "Giriş başarılı" });
         }
 
         [HttpGet("profile/{username}")]

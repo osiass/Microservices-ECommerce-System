@@ -10,7 +10,7 @@ namespace WebUI.Services
             _httpClient = httpClientFactory.CreateClient("GatewayClient");
         }
 
-        public async Task<(string? Token, string? Role)> Login(string username, string password)
+        public async Task<(string? Token, string? Role, string? Email)> Login(string username, string password)
         {
             var loginDto = new UserLoginDto { UserName = username, Password = password };
             var response = await _httpClient.PostAsJsonAsync("/identity/api/auth/login", loginDto);
@@ -18,10 +18,9 @@ namespace WebUI.Services
             if(response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
-
-                return (result?.Token, result?.Role);
+                return (result?.Token, result?.Role, result?.Email);
             }
-            return (null, null);
+            return (null, null, null);
         }
 
         public async Task<(bool Success, string? ErrorMessage)> Register(UserRegisterDto registerDto)

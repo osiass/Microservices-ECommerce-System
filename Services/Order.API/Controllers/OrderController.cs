@@ -175,6 +175,7 @@ namespace Order.API.Controllers
                 var newOrder = new Entities.Order
                 {
                     UserName = checkoutData.UserName,
+                    UserEmail = checkoutData.UserEmail,
                     AddressLine = checkoutData.AddressLine,
                     TotalPrice = paymentRequest.Amount,
                     CreatedDate = DateTime.UtcNow,
@@ -223,6 +224,8 @@ namespace Order.API.Controllers
                 {
                     OrderId = order.Id,
                     UserName = order.UserName,
+                    UserEmail = order.UserEmail,
+                    TotalPrice = order.TotalPrice,
                     Items = order.OrderItems.Select(x => new OrderItemStockData
                     {
                         ProductId = x.ProductId,

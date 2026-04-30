@@ -1,5 +1,6 @@
 using Catalog.API.Data;
 using Catalog.API.Entities;
+using Catalog.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
@@ -20,32 +21,37 @@ public class ProductsController : ControllerBase
     private readonly CatalogContext _context;
     private readonly Common.EventBus.IEventBus _eventBus;
     private readonly ILogger<ProductsController> _logger;
+    private readonly ProductCacheService _cache;
 
-    public ProductsController(CatalogContext context, Common.EventBus.IEventBus eventBus, ILogger<ProductsController> logger)
+    public ProductsController(CatalogContext context, Common.EventBus.IEventBus eventBus, ILogger<ProductsController> logger, ProductCacheService cache)
     {
         _context = context;
         _eventBus = eventBus;
         _logger = logger;
+        _cache = cache;
     }
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<ProductDto>))]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts(string? search, string? category)
     {
+        var cached = await _cache.GetProductListAsync(search, category);
+        if (cached != null) return Ok(cached);
+
         IQueryable<Product> query = _context.Products.AsNoTracking();
 
         if (!string.IsNullOrEmpty(search))
-        {
             query = query.Where(p => p.Name.ToLower().Contains(search.ToLower()));
-        }
 
         if (!string.IsNullOrEmpty(category))
-        {
             query = query.Where(p => p.Category == category);
-        }
 
         var products = await query.ToListAsync();
-        return Ok(products.Select(MapToDto).ToList());
+        var result = products.Select(MapToDto).ToList();
+
+        await _cache.SetProductListAsync(search, category, result);
+
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
@@ -53,15 +59,22 @@ public class ProductsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ProductDto>> GetProduct(string id)
-    {   
+    {
         if (!Guid.TryParse(id, out var guidId)) return BadRequest("Invalid product ID");
-        
+
+        var cached = await _cache.GetProductAsync(id);
+        if (cached != null) return Ok(cached);
+
         var product = await _context.Products
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == guidId);
 
         if (product == null) return NotFound();
-        return Ok(MapToDto(product));
+
+        var dto = MapToDto(product);
+        await _cache.SetProductAsync(dto);
+
+        return Ok(dto);
     }
 
     [HttpPost]
@@ -123,6 +136,7 @@ public class ProductsController : ControllerBase
         _context.Products.Remove(product);
         await _context.SaveChangesAsync();
 
+        await _cache.RemoveProductAsync(id);
         _ = PublishProductDeleted(id);
 
         return NoContent();
@@ -163,6 +177,7 @@ public class ProductsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        await _cache.RemoveProductAsync(id);
         _ = PublishProductUpdated(product);
 
         return NoContent();

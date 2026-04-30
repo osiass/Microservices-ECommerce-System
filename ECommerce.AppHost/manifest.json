@@ -18,14 +18,24 @@
         }
       }
     },
-    "jwt-key": {
-      "type": "parameter.v0",
-      "value": "{jwt-key.inputs.value}",
-      "inputs": {
-        "value": {
-          "type": "string",
-          "secret": true,
-          "default": { "value": "my-mock-secret" }
+    "cache": {
+      "type": "container.v0",
+      "connectionString": "{cache.bindings.tcp.host}:{cache.bindings.tcp.port},password={cache-password.value}",
+      "image": "docker.io/library/redis:8.2",
+      "entrypoint": "/bin/sh",
+      "args": [
+        "-c",
+        "redis-server --requirepass $REDIS_PASSWORD"
+      ],
+      "env": {
+        "REDIS_PASSWORD": "{cache-password.value}"
+      },
+      "bindings": {
+        "tcp": {
+          "scheme": "tcp",
+          "protocol": "tcp",
+          "transport": "tcp",
+          "targetPort": 6379
         }
       }
     },
@@ -44,7 +54,12 @@
         "MESSAGING_USERNAME": "guest",
         "MESSAGING_PASSWORD": "{messaging-password.value}",
         "MESSAGING_URI": "amqp://guest:{messaging-password-uri-encoded.value}@{messaging.bindings.tcp.host}:{messaging.bindings.tcp.port}",
-        "Jwt__Key": "{jwt-key.value}"
+        "ConnectionStrings__cache": "{cache.connectionString}",
+        "CACHE_HOST": "{cache.bindings.tcp.host}",
+        "CACHE_PORT": "{cache.bindings.tcp.port}",
+        "CACHE_PASSWORD": "{cache-password.value}",
+        "CACHE_URI": "redis://:{cache-password-uri-encoded.value}@{cache.bindings.tcp.host}:{cache.bindings.tcp.port}",
+        "Jwt__Key": "ThisSecureKeyIsExactly32CharsLong!"
       },
       "bindings": {
         "http": {
@@ -68,7 +83,7 @@
         "OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY": "in_memory",
         "ASPNETCORE_FORWARDEDHEADERS_ENABLED": "true",
         "HTTP_PORTS": "{discount-api.bindings.http.targetPort}",
-        "Jwt__Key": "{jwt-key.value}"
+        "Jwt__Key": "ThisSecureKeyIsExactly32CharsLong!"
       },
       "bindings": {
         "http": {
@@ -92,7 +107,7 @@
         "OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY": "in_memory",
         "ASPNETCORE_FORWARDEDHEADERS_ENABLED": "true",
         "HTTP_PORTS": "{identity-api.bindings.http.targetPort}",
-        "Jwt__Key": "{jwt-key.value}"
+        "Jwt__Key": "ThisSecureKeyIsExactly32CharsLong!"
       },
       "bindings": {
         "http": {
@@ -116,7 +131,7 @@
         "OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY": "in_memory",
         "ASPNETCORE_FORWARDEDHEADERS_ENABLED": "true",
         "HTTP_PORTS": "{basket-api.bindings.http.targetPort}",
-        "Jwt__Key": "{jwt-key.value}"
+        "Jwt__Key": "ThisSecureKeyIsExactly32CharsLong!"
       },
       "bindings": {
         "http": {
@@ -140,7 +155,7 @@
         "OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY": "in_memory",
         "ASPNETCORE_FORWARDEDHEADERS_ENABLED": "true",
         "HTTP_PORTS": "{payment-api.bindings.http.targetPort}",
-        "Jwt__Key": "{jwt-key.value}"
+        "Jwt__Key": "ThisSecureKeyIsExactly32CharsLong!"
       },
       "bindings": {
         "http": {
@@ -174,7 +189,7 @@
         "services__payment-api__http__0": "{payment-api.bindings.http.url}",
         "PAYMENT_API_HTTPS": "{payment-api.bindings.https.url}",
         "services__payment-api__https__0": "{payment-api.bindings.https.url}",
-        "Jwt__Key": "{jwt-key.value}"
+        "Jwt__Key": "ThisSecureKeyIsExactly32CharsLong!"
       },
       "bindings": {
         "http": {
@@ -204,7 +219,36 @@
         "MESSAGING_USERNAME": "guest",
         "MESSAGING_PASSWORD": "{messaging-password.value}",
         "MESSAGING_URI": "amqp://guest:{messaging-password-uri-encoded.value}@{messaging.bindings.tcp.host}:{messaging.bindings.tcp.port}",
-        "Jwt__Key": "{jwt-key.value}"
+        "Jwt__Key": "ThisSecureKeyIsExactly32CharsLong!"
+      },
+      "bindings": {
+        "http": {
+          "scheme": "http",
+          "protocol": "tcp",
+          "transport": "http"
+        },
+        "https": {
+          "scheme": "https",
+          "protocol": "tcp",
+          "transport": "http"
+        }
+      }
+    },
+    "notification-api": {
+      "type": "project.v0",
+      "path": "../Services/Notification.API/Notification.API.csproj",
+      "env": {
+        "OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES": "true",
+        "OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES": "true",
+        "OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY": "in_memory",
+        "ASPNETCORE_FORWARDEDHEADERS_ENABLED": "true",
+        "HTTP_PORTS": "{notification-api.bindings.http.targetPort}",
+        "ConnectionStrings__messaging": "{messaging.connectionString}",
+        "MESSAGING_HOST": "{messaging.bindings.tcp.host}",
+        "MESSAGING_PORT": "{messaging.bindings.tcp.port}",
+        "MESSAGING_USERNAME": "guest",
+        "MESSAGING_PASSWORD": "{messaging-password.value}",
+        "MESSAGING_URI": "amqp://guest:{messaging-password-uri-encoded.value}@{messaging.bindings.tcp.host}:{messaging.bindings.tcp.port}"
       },
       "bindings": {
         "http": {
@@ -278,7 +322,7 @@
         "OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES": "true",
         "OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY": "in_memory",
         "ASPNETCORE_FORWARDEDHEADERS_ENABLED": "true",
-        "HTTP_PORTS": "{web-ui.bindings.http.targetPort}",
+        "HTTP_PORTS": "{web-ui.bindings.http.targetPort};{web-ui.bindings.web-8081.targetPort}",
         "GATEWAY_HTTP": "{gateway.bindings.http.url}",
         "services__gateway__http__0": "{gateway.bindings.http.url}",
         "GATEWAY_HTTPS": "{gateway.bindings.https.url}",
@@ -294,7 +338,8 @@
         "ORDER_API_HTTP": "{order-api.bindings.http.url}",
         "services__order-api__http__0": "{order-api.bindings.http.url}",
         "ORDER_API_HTTPS": "{order-api.bindings.https.url}",
-        "services__order-api__https__0": "{order-api.bindings.https.url}"
+        "services__order-api__https__0": "{order-api.bindings.https.url}",
+        "GatewayExternalUrl": "http://localhost:8080"
       },
       "bindings": {
         "http": {
@@ -306,6 +351,13 @@
           "scheme": "https",
           "protocol": "tcp",
           "transport": "http"
+        },
+        "web-8081": {
+          "scheme": "http",
+          "protocol": "tcp",
+          "transport": "http",
+          "port": 8081,
+          "targetPort": 8000
         }
       }
     },
@@ -328,6 +380,27 @@
     "messaging-password-uri-encoded": {
       "type": "annotated.string",
       "value": "{messaging-password.value}",
+      "filter": "uri"
+    },
+    "cache-password": {
+      "type": "parameter.v0",
+      "value": "{cache-password.inputs.value}",
+      "inputs": {
+        "value": {
+          "type": "string",
+          "secret": true,
+          "default": {
+            "generate": {
+              "minLength": 22,
+              "special": false
+            }
+          }
+        }
+      }
+    },
+    "cache-password-uri-encoded": {
+      "type": "annotated.string",
+      "value": "{cache-password.value}",
       "filter": "uri"
     }
   }

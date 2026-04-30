@@ -69,6 +69,7 @@
                 await LocalStorage.SetItemAsync("authToken", result.Token);
                 await LocalStorage.SetItemAsync("userName", username);
                 await LocalStorage.SetItemAsync("userRole", result.Role);
+                await LocalStorage.SetItemAsync("userEmail", result.Email ?? string.Empty);
                 AuthProvider.NotifyUserLogin(username, result.Role);
                 ToastService.Notify("Giriş başarılı! Hoş geldiniz.", ToastLevel.Success);
                 Nav.NavigateTo("/");

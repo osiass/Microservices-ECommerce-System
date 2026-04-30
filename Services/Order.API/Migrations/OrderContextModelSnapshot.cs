@@ -52,6 +52,10 @@ namespace Order.API.Migrations
                     b.Property<string>("TransactionId")
                         .HasColumnType("text");
 
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("UserName")
                         .IsRequired()
                         .HasColumnType("text");

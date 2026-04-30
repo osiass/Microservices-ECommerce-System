@@ -2,6 +2,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 // Altyapı Bileşenleri
 var rabbitmq = builder.AddRabbitMQ("messaging");
+var redis = builder.AddRedis("cache");
 
 // JWT Secret Key - 32 karakter tam uyumlu
 var jwtKey = "ThisSecureKeyIsExactly32CharsLong!";
@@ -9,6 +10,7 @@ var jwtKey = "ThisSecureKeyIsExactly32CharsLong!";
 // Servisleri tanımla
 var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
     .WithReference(rabbitmq)
+    .WithReference(redis)
     .WithEnvironment("Jwt__Key", jwtKey);
 var discountApi = builder.AddProject<Projects.Discount_API>("discount-api")
     .WithEnvironment("Jwt__Key", jwtKey);
@@ -25,6 +27,8 @@ var orderApi = builder.AddProject<Projects.Order_API>("order-api")
 var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
     .WithReference(rabbitmq)
     .WithEnvironment("Jwt__Key", jwtKey);
+var notificationApi = builder.AddProject<Projects.Notification_API>("notification-api")
+    .WithReference(rabbitmq);
 
 //Gatewayi tanımla
 var gateway = builder.AddProject<Projects.YarpGateway_API>("gateway")

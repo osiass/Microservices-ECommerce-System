@@ -1,4 +1,4 @@
----
+﻿---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,17 +18,27 @@ spec:
       labels:
         app: catalog-api
     spec:
+      initContainers:
+      - name: migrate
+        image: localhost:5000/catalog-api:latest
+        imagePullPolicy: Always
+        args: ["--migrate"]
+        envFrom:
+        - configMapRef:
+            name: catalog-api-env
+        - secretRef:
+            name: ecommerce-secrets
       containers:
       - name: catalog-api
         image: localhost:5000/catalog-api:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         resources:
           limits:
             cpu: "500m"
             memory: "1Gi"
           requests:
             cpu: "100m"
-            memory: "256Mi"
+            memory: "128Mi"
         livenessProbe:
           httpGet:
             path: /alive
@@ -49,4 +59,6 @@ spec:
         envFrom:
         - configMapRef:
             name: catalog-api-env
+        - secretRef:
+            name: ecommerce-secrets
       terminationGracePeriodSeconds: 180

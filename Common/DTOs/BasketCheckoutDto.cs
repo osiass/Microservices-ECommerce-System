@@ -6,6 +6,7 @@ public class BasketCheckoutDto
 {
     [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
     public string UserName { get; set; } = string.Empty;
+    public string UserEmail { get; set; } = string.Empty;
     
     [Required(ErrorMessage = "Adres bilgisi zorunludur.")]
     public string AddressLine { get; set; } = string.Empty;

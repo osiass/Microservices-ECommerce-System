@@ -1,4 +1,4 @@
----
+﻿---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,10 +18,20 @@ spec:
       labels:
         app: identity-api
     spec:
+      initContainers:
+      - name: migrate
+        image: localhost:5000/identity-api:latest
+        imagePullPolicy: Always
+        args: ["--migrate"]
+        envFrom:
+        - configMapRef:
+            name: identity-api-env
+        - secretRef:
+            name: ecommerce-secrets
       containers:
       - name: identity-api
         image: localhost:5000/identity-api:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         resources:
           limits:
             cpu: "500m"
@@ -49,5 +59,6 @@ spec:
         envFrom:
         - configMapRef:
             name: identity-api-env
+        - secretRef:
+            name: ecommerce-secrets
       terminationGracePeriodSeconds: 180
-

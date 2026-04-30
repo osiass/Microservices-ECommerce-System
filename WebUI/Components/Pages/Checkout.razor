@@ -210,6 +210,7 @@
         {
             var token = await LocalStore.GetItemAsync<string>("authToken");
             var user = await LocalStore.GetItemAsync<string>("userName");
+            var userEmail = await LocalStore.GetItemAsync<string>("userEmail");
 
             if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(user))
             {
@@ -226,6 +227,7 @@
                 var checkoutDto = new BasketCheckoutDto
                 {
                     UserName = user,
+                    UserEmail = userEmail ?? string.Empty,
                     AddressLine = address,
                     CardNumber = cardNumber,
                     CardHolderName = cardHolderName,

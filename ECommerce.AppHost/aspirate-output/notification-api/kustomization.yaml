@@ -1,0 +1,23 @@
+resources:
+- deployment.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: notification-api-env
+  literals:
+    - OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES=true
+    - OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES=true
+    - OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY=in_memory
+    - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+    - HTTP_PORTS=8080
+    - ConnectionStrings__messaging=amqp://guest:guest@messaging:5672
+    - MESSAGING_HOST=messaging
+    - MESSAGING_PORT=5672
+    - MESSAGING_USERNAME=guest
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+    - OTEL_SERVICE_NAME=notification-api
+    - ASPNETCORE_URLS=http://+:8080;
+    - ASPNETCORE_ENVIRONMENT=Development
+    - Mailtrap__Token=bc94b5b45b3d9d53c05c96d4112e9f11

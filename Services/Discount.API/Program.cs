@@ -8,6 +8,34 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
+if (args.Contains("--migrate"))
+{
+    builder.Services.AddDbContext<DiscountContext>(o =>
+        o.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    var migrateApp = builder.Build();
+    using var scope = migrateApp.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<DiscountContext>();
+    for (int i = 1; i <= 20; i++)
+    {
+        try
+        {
+            await db.Database.MigrateAsync();
+            Console.WriteLine("[Discount.API] Migration OK.");
+            return;
+        }
+        catch (Exception ex) when (ex.Message.Contains("already exists"))
+        {
+            var pending = await db.Database.GetPendingMigrationsAsync();
+            foreach (var m in pending)
+                await db.Database.ExecuteSqlRawAsync($"INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ('{m}', '10.0.5') ON CONFLICT DO NOTHING");
+            Console.WriteLine("[Discount.API] Migration history güncellendi.");
+            return;
+        }
+        catch (Exception ex) { Console.WriteLine($"[Discount.API] Migration {i}/20: {ex.Message}"); if (i == 20) { Environment.Exit(1); } await Task.Delay(3000); }
+    }
+    return;
+}
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();

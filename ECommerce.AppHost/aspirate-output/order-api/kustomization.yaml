@@ -1,4 +1,4 @@
-resources:
+﻿resources:
 - deployment.yaml
 - service.yaml
 
@@ -21,7 +21,6 @@ configMapGenerator:
     - MESSAGING_URI=amqp://guest:guest@messaging:5672
     - PAYMENT_API_HTTP=http://payment-api:8080
     - services__payment-api__http__0=http://payment-api:8080
-    - Jwt__Key=ThisSecureKeyIsExactly32CharsLong!
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
     - OTEL_SERVICE_NAME=order-api
     - ASPNETCORE_URLS=http://+:8080;

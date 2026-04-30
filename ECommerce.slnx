@@ -11,6 +11,7 @@
     <Project Path="Services/Discount.API/Discount.API.csproj" />
     <Project Path="Services/Identity.API/Identity.API.csproj" />
     <Project Path="Services/Inventory.API/Inventory.API.csproj" />
+    <Project Path="Services/Notification.API/Notification.API.csproj" />
     <Project Path="Services/Order.API/Order.API.csproj" />
     <Project Path="Services/Payment.API/Payment.API.csproj" />
   </Folder>

@@ -18,10 +18,20 @@ spec:
       labels:
         app: basket-api
     spec:
+      initContainers:
+      - name: migrate
+        image: localhost:5000/basket-api:latest
+        imagePullPolicy: Always
+        args: ["--migrate"]
+        envFrom:
+        - configMapRef:
+            name: basket-api-env
+        - secretRef:
+            name: ecommerce-secrets
       containers:
       - name: basket-api
         image: localhost:5000/basket-api:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         resources:
           limits:
             cpu: "500m"
@@ -49,5 +59,6 @@ spec:
         envFrom:
         - configMapRef:
             name: basket-api-env
+        - secretRef:
+            name: ecommerce-secrets
       terminationGracePeriodSeconds: 180
-

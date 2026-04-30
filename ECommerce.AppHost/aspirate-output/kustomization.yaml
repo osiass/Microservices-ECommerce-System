@@ -1,5 +1,6 @@
 resources:
 - messaging
+- notification-api
 - catalog-api
 - discount-api
 - identity-api
@@ -10,9 +11,8 @@ resources:
 - gateway
 - web-ui
 - dashboard.yaml
-- postgres-databases.yaml
-- db-pvcs.yaml
-- db-init-configmaps.yaml
+- redis.yaml
+- secrets.yaml
 
 generatorOptions:
   disableNameSuffixHash: true

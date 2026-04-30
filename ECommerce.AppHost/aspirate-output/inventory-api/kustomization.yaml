@@ -1,4 +1,4 @@
-resources:
+﻿resources:
 - deployment.yaml
 - service.yaml
 
@@ -19,7 +19,6 @@ configMapGenerator:
     - MESSAGING_USERNAME=guest
     - MESSAGING_PASSWORD=guest
     - MESSAGING_URI=amqp://guest:guest@messaging:5672
-    - Jwt__Key=ThisSecureKeyIsExactly32CharsLong!
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
     - OTEL_SERVICE_NAME=inventory-api
     - ASPNETCORE_URLS=http://+:8080;
