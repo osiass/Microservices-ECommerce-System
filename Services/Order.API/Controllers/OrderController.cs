@@ -101,8 +101,28 @@ namespace Order.API.Controllers
             return Ok(hasBought);
         }
 
+        [HttpGet("customers")]
+        [Authorize(Roles = "Admin,Analist")]
+        public async Task<ActionResult> GetCustomers()
+        {
+            var customers = await _context.Orders
+                .AsNoTracking()
+                .GroupBy(o => o.UserName)
+                .Select(g => new
+                {
+                    UserName = g.Key,
+                    OrderCount = g.Count(),
+                    TotalSpent = g.Sum(o => o.TotalPrice),
+                    LastOrderDate = g.Max(o => o.CreatedDate)
+                })
+                .OrderByDescending(c => c.TotalSpent)
+                .ToListAsync();
+
+            return Ok(customers);
+        }
+
         [HttpGet("all")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Analist")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<OrderDto>))]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -266,7 +286,114 @@ namespace Order.API.Controllers
             Quantity = oi.Quantity,
             ImageUrl = oi.ImageUrl
         };
-    }
 
-    public record PaymentResult(bool Success, string TransactionId);
+        [HttpGet("report")]
+        [Authorize(Roles = "Admin,Analist")]
+        public async Task<ActionResult> GetReport([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        {
+            var start = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
+            var end = DateTime.SpecifyKind(endDate.Date.AddDays(1), DateTimeKind.Utc);
+            var orders = await _context.Orders
+                .AsNoTracking()
+                .Include(x => x.OrderItems)
+                .Where(o => o.CreatedDate >= start && o.CreatedDate < end)
+                .ToListAsync();
+
+            var report = new
+            {
+                TotalOrders = orders.Count,
+                TotalRevenue = orders.Sum(o => o.TotalPrice),
+                Products = orders
+                    .SelectMany(o => o.OrderItems)
+                    .GroupBy(i => i.ProductName)
+                    .Select(g => new
+                    {
+                        ProductName = g.Key,
+                        TotalQuantity = g.Sum(i => i.Quantity),
+                        TotalRevenue = g.Sum(i => i.Price * i.Quantity)
+                    })
+                    .OrderByDescending(x => x.TotalRevenue)
+                    .ToList()
+            };
+
+            return Ok(report);
+        }
+        [HttpGet("report/export")]
+        [Authorize(Roles = "Admin,Analist")]
+        public async Task<IActionResult> ExportReport([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        {
+            var start = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
+            var end = DateTime.SpecifyKind(endDate.Date.AddDays(1), DateTimeKind.Utc);
+            var orders = await _context.Orders
+                .AsNoTracking()
+                .Include(x => x.OrderItems)
+                .Where(o => o.CreatedDate >= start && o.CreatedDate < end)
+                .ToListAsync();
+
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var ws = workbook.Worksheets.Add("Satış Raporu");
+
+            // Özet bilgiler
+            ws.Cell(1, 1).Value = "Dönem";
+            ws.Cell(1, 2).Value = $"{startDate:dd.MM.yyyy} - {endDate:dd.MM.yyyy}";
+            ws.Cell(2, 1).Value = "Toplam Sipariş";
+            ws.Cell(2, 2).Value = orders.Count;
+            ws.Cell(3, 1).Value = "Toplam Ciro (İndirim Sonrası)";
+            ws.Cell(3, 2).Value = orders.Sum(o => o.TotalPrice);
+            ws.Cell(3, 2).Style.NumberFormat.Format = "₺#,##0.00";
+
+            // Özet başlık stilleri
+            ws.Range("A1:A3").Style.Font.Bold = true;
+            ws.Range("A1:B3").Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F5F5F5");
+
+            // Boş satır
+            // Ürün tablosu başlığı
+            ws.Cell(5, 1).Value = "Ürün";
+            ws.Cell(5, 2).Value = "Satış Adedi";
+            ws.Cell(5, 3).Value = "Ciro (₺)";
+
+            var headerRange = ws.Range("A5:C5");
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.Black;
+            headerRange.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+
+            var products = orders
+                .SelectMany(o => o.OrderItems)
+                .GroupBy(i => i.ProductName)
+                .Select(g => new { g.Key, Qty = g.Sum(i => i.Quantity), Rev = g.Sum(i => i.Price * i.Quantity) })
+                .OrderByDescending(x => x.Rev)
+                .ToList();
+
+            for (int i = 0; i < products.Count; i++)
+            {
+                ws.Cell(6 + i, 1).Value = products[i].Key;
+                ws.Cell(6 + i, 2).Value = products[i].Qty;
+                ws.Cell(6 + i, 3).Value = products[i].Rev;
+                ws.Cell(6 + i, 3).Style.NumberFormat.Format = "₺#,##0.00";
+
+                if (i % 2 == 1)
+                    ws.Range(6 + i, 1, 6 + i, 3).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#FAFAFA");
+            }
+
+            // Toplam satırı
+            int totalRow = 6 + products.Count;
+            ws.Cell(totalRow, 1).Value = "TOPLAM";
+            ws.Cell(totalRow, 2).Value = products.Sum(p => p.Qty);
+            ws.Cell(totalRow, 3).Value = products.Sum(p => p.Rev);
+            ws.Cell(totalRow, 3).Style.NumberFormat.Format = "₺#,##0.00";
+            ws.Range(totalRow, 1, totalRow, 3).Style.Font.Bold = true;
+            ws.Range(totalRow, 1, totalRow, 3).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F5F5F5");
+
+            ws.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var bytes = stream.ToArray();
+
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"rapor_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.xlsx");
+        }
+     }
+
+        public record PaymentResult(bool Success, string TransactionId);
 }

@@ -246,6 +246,44 @@ namespace WebUI.Services
             }
         }
 
+        public async Task<byte[]?> ExportProducts(string token)
+        {
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, "/catalog/api/products/export");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var response = await _httpClient.SendAsync(request);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch { return null; }
+        }
+
+        public async Task<(int Imported, List<string> Errors)> ImportProducts(string token, IBrowserFile file)
+        {
+            try
+            {
+                using var content = new MultipartFormDataContent();
+                var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                var fileContent = new StreamContent(stream);
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(fileContent, "file", file.Name);
+
+                var request = new HttpRequestMessage(HttpMethod.Post, "/catalog/api/products/import");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                request.Content = content;
+
+                var response = await _httpClient.SendAsync(request);
+                if (!response.IsSuccessStatusCode) return (0, new List<string> { "Sunucu hatası." });
+
+                var result = await response.Content.ReadFromJsonAsync<ImportResult>();
+                return (result?.Imported ?? 0, result?.Errors ?? new());
+            }
+            catch (Exception ex) { return (0, new List<string> { ex.Message }); }
+        }
+
+        private record ImportResult(int Imported, List<string> Errors);
+
         private string? CleanJsonError(string json)
         {
             try

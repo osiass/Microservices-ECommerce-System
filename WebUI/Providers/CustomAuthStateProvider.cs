@@ -15,23 +15,27 @@ namespace WebUI.Providers
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var token = await _localStorage.GetItemAsync<string>("authToken");
-            var userName = await _localStorage.GetItemAsync<string>("userName");
-            var role = await _localStorage.GetItemAsync<string>("userRole");
+            try
+            {
+                var token = await _localStorage.GetItemAsync<string>("authToken");
+                var userName = await _localStorage.GetItemAsync<string>("userName");
+                var role = await _localStorage.GetItemAsync<string>("userRole");
 
-            if (string.IsNullOrEmpty(token))
+                if (string.IsNullOrEmpty(token))
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+
+                var identity = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Name, userName ?? ""),
+                    new Claim(ClaimTypes.Role, role ?? "")
+                }, "jwt");
+
+                return new AuthenticationState(new ClaimsPrincipal(identity));
+            }
+            catch
             {
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
-
-            var identity = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.Name, userName ?? ""),
-                new Claim(ClaimTypes.Role, role ?? "")
-            }, "jwt");
-
-            var user = new ClaimsPrincipal(identity);
-            return new AuthenticationState(user);
         }
 
         public void NotifyUserLogin(string userName, string role)

@@ -183,7 +183,7 @@ items:
       );
       COPY public."AppUsers" ("Id", "UserName", "Password", "Email", "Role") FROM stdin;
       1	admin	$2a$11$8YoS2T5RywzEfjGP1U/YWOpj.qkwKHAiiNKaER5dLGAkCBp73WFeC	admin@ecommerce.com	Admin
-      2	ahmet	$2a$11$9DUIDMs.5K2mqZ7evQ1HPOJGZEunYCj42aukAwy2nHMmPBKmdUZQ2	ahmetkoc.iletisim@gmail.com	User
+      2	ahmet	$2a$11$8YoS2T5RywzEfjGP1U/YWOpj.qkwKHAiiNKaER5dLGAkCBp73WFeC	ahmetkoc.iletisim@gmail.com	User
       \.
       COPY public."__EFMigrationsHistory" ("MigrationId", "ProductVersion") FROM stdin;
       20260317071804_first	10.0.5

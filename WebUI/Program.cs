@@ -24,15 +24,15 @@ builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<ToastService>();
 
-// Authentication & Authorization 
-builder.Services.AddAuthentication("Cookies")
-    .AddCookie("Cookies", options => 
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    });
+// Authentication & Authorization - Blazor seviyesinde, HTTP challenge yok
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = "NoOp";
+    options.DefaultChallengeScheme = "NoOp";
+    options.DefaultForbidScheme = "NoOp";
+}).AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, WebUI.Auth.NoOpAuthHandler>("NoOp", null);
 builder.Services.AddAuthorizationCore();
-builder.Services.AddAntiforgery(options => 
+builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;

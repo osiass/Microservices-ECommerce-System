@@ -21,8 +21,47 @@
 <body>
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <ReconnectModal />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        window.downloadFileFromBase64 = (fileName, base64) => {
+            const link = document.createElement('a');
+            link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + base64;
+            link.download = fileName;
+            link.click();
+        };
+
+        let revenueChart = null;
+        window.renderRevenueChart = (labels, data) => {
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+            if (revenueChart) revenueChart.destroy();
+            revenueChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#000','#333','#555','#777','#999','#bbb'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.label + ': ₺' + ctx.parsed.toLocaleString('tr-TR')
+                            }
+                        }
+                    }
+                }
+            });
+        };
+    </script>
 </body>
 
 </html>

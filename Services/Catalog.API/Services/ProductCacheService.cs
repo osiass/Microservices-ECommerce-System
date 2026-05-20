@@ -56,6 +56,11 @@ public class ProductCacheService
         return JsonSerializer.Deserialize<List<ProductDto>>(data);
     }
 
+    public async Task RemoveProductListAsync()
+    {
+        await _cache.RemoveAsync(ListKey(null, null));
+    }
+
     public async Task SetProductListAsync(string? search, string? category, List<ProductDto> products)
     {
         await _cache.SetStringAsync(

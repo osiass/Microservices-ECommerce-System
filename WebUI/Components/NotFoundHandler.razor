@@ -1,0 +1,38 @@
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border"></div>
+    </div>
+}
+else
+{
+    <p>Üzgünüz, aradığınız sayfa bulunamadı.</p>
+}
+
+@code {
+    private bool isLoading = true;
+    private System.Timers.Timer? _timer;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _timer = new System.Timers.Timer(800);
+            _timer.Elapsed += (s, e) =>
+            {
+                _timer?.Stop();
+                InvokeAsync(() =>
+                {
+                    isLoading = false;
+                    Nav.NavigateTo(Nav.Uri, forceLoad: false);
+                });
+            };
+            _timer.Start();
+        }
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

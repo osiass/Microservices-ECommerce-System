@@ -4,7 +4,7 @@
 @using WebUI.Services
 @inject OrderService OrderService
 @inject Blazored.LocalStorage.ILocalStorageService LocalStore
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin,Analist")]
 
 <div class="container-fluid py-4 px-4 pb-5">
     <div class="admin-header">

@@ -63,6 +63,8 @@ namespace Basket.API.Controllers
             {
                 _context.RemoveRange(existingBasket.Items);
                 existingBasket.Items = shoppingCart.Items;
+                existingBasket.Discount = shoppingCart.Discount;
+                existingBasket.CouponCode = shoppingCart.CouponCode;
                 _context.ShoppingCarts.Update(existingBasket);
             }
             else

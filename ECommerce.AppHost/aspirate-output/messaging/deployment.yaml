@@ -35,6 +35,13 @@ spec:
             port: 5672
           initialDelaySeconds: 5
           periodSeconds: 10
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
         ports:
         - name: tcp
           containerPort: 5672

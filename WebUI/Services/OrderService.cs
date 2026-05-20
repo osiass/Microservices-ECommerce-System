@@ -170,5 +170,47 @@ namespace WebUI.Services
                 return false;
             }
         }
+        public async Task<List<CustomerReportDto>> GetCustomers(string token)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                return await _httpClient.GetFromJsonAsync<List<CustomerReportDto>>("/order/api/order/customers") ?? new();
+            }
+            catch { return new(); }
+        }
+
+        public async Task<OrderReportDto?> GetReport(string token, DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var url = $"/order/api/order/report?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}";
+                return await _httpClient.GetFromJsonAsync<OrderReportDto>(url);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OrderService] GetReport hatası: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<byte[]?> ExportReport(string token, DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var url = $"/order/api/order/report/export?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}";
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OrderService] ExportReport hatası: {ex.Message}");
+                return null;
+            }
+        }
     }
+    
 }

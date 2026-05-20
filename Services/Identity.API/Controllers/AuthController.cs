@@ -2,6 +2,7 @@ using Common.DTOs;
 using Identity.API.Data;
 using Identity.API.Entities;
 using Identity.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -38,7 +39,8 @@ namespace Identity.API.Controllers
                 {
                     UserName = registerDto.UserName.ToLower(),
                     Email = registerDto.Email,
-                    Password = hashedPassword
+                    Password = hashedPassword,
+                    Role = "User"
                 };
 
                 _context.AppUsers.Add(newUser);
@@ -109,5 +111,39 @@ namespace Identity.API.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+
+        [HttpGet("users")]
+        [Authorize(Roles="Admin")]
+        public async Task<ActionResult> GetUsers()
+        {
+            var users = await _context.AppUsers
+                .AsNoTracking()
+                .Select(u => new {u.Id, u.UserName, u.Email, u.Role})
+                .ToListAsync();
+            return Ok(users);
+        }
+
+        [HttpPut("users/{id}/role")]
+        [Authorize(Roles="Admin")]
+        public async Task<ActionResult> UpdateRole(int id, [FromBody] string role)
+        {
+            var user = await _context.AppUsers.FindAsync(id);
+            if(user==null) return NotFound();
+            user.Role=role;
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("users/{id}")]
+        [Authorize(Roles="Admin")]
+        public async Task<ActionResult> DeleteUser(int id)
+        {
+            var user =await _context.AppUsers.FindAsync(id);
+            if(user==null) return NotFound();
+            _context.AppUsers.Remove(user);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
     }
 }

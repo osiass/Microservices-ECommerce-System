@@ -45,5 +45,39 @@ namespace WebUI.Services
             var response = await _httpClient.PutAsJsonAsync($"/identity/api/auth/profile/{username}", updateDto);
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<List<UserManagementDto>> GetUsers(string token)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                return await _httpClient.GetFromJsonAsync<List<UserManagementDto>>("/identity/api/auth/users") ?? new();
+            }
+            catch { return new(); }
+        }
+
+        public async Task<bool> UpdateUserRole(string token, int userId, string role)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var response = await _httpClient.PutAsJsonAsync($"/identity/api/auth/users/{userId}/role", role);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> DeleteUser(string token, int userId)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var request = new HttpRequestMessage(HttpMethod.Delete, $"/identity/api/auth/users/{userId}");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var response = await _httpClient.SendAsync(request);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
     }
 }

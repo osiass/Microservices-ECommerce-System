@@ -24,10 +24,10 @@
                     <NavLink class="nav-link nav-link-bold" href="" Match="NavLinkMatch.All">Yeni Gelenler</NavLink>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link nav-link-bold" href="products">Koleksiyon</NavLink>
+                    <NavLink class="nav-link nav-link-bold" href="/products">Koleksiyon</NavLink>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link nav-link-bold sale-link" href="products?filter=discounted">İndirimli</NavLink>
+                    <NavLink class="nav-link nav-link-bold sale-link" href="/products?filter=discounted">İndirimli</NavLink>
                 </li>
             </ul>
 
@@ -37,7 +37,7 @@
                     <input type="text" placeholder="Ürün ara..." />
                 </div>
 
-                <NavLink class="nav-icon-link position-relative" href="basket">
+                <NavLink class="nav-icon-link position-relative" href="/basket">
                     <i class="bi bi-bag fs-5"></i>
                     @if (basketItemCount > 0)
                     {
@@ -46,7 +46,7 @@
                 </NavLink>
 
                 <AuthorizeView>
-                    <Authorized>
+                    <Authorized Context="authCtx">
                         <div class="dropdown">
                             <button class="btn user-btn-minimal dropdown-toggle px-0" type="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-person-circle fs-5"></i>
@@ -57,22 +57,35 @@
                                         <div class="user-avatar-sm"><i class="bi bi-person-fill"></i></div>
                                         <div>
                                             <div class="fw-bold small" style="color:#000;">Hesabım</div>
-                                            <div class="text-muted" style="font-size:0.72rem;">Üye</div>
+                                            <div class="text-muted" style="font-size:0.72rem;">@GetRoleDisplay(authCtx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)</div>
                                         </div>
                                     </span>
                                 </li>
-                                <li><NavLink class="dropdown-item py-2" href="profile"><i class="bi bi-person me-2 text-muted"></i>Profilim</NavLink></li>
-                                <li><NavLink class="dropdown-item py-2" href="my-orders"><i class="bi bi-box-seam me-2 text-muted"></i>Siparişlerim</NavLink></li>
-                                <li><NavLink class="dropdown-item py-2" href="basket"><i class="bi bi-bag me-2 text-muted"></i>Sepetim</NavLink></li>
-                                <li><NavLink class="dropdown-item py-2" href="products?filter=discounted"><i class="bi bi-tag me-2 text-muted"></i>Kampanyalar</NavLink></li>
-                                <AuthorizeView Roles="Admin" Context="adminContext">
+                                <li><NavLink class="dropdown-item py-2" href="/profile"><i class="bi bi-person me-2 text-muted"></i>Profilim</NavLink></li>
+                                <li><NavLink class="dropdown-item py-2" href="/my-orders"><i class="bi bi-box-seam me-2 text-muted"></i>Siparişlerim</NavLink></li>
+                                <li><NavLink class="dropdown-item py-2" href="/basket"><i class="bi bi-bag me-2 text-muted"></i>Sepetim</NavLink></li>
+                                <li><NavLink class="dropdown-item py-2" href="/products?filter=discounted"><i class="bi bi-tag me-2 text-muted"></i>Kampanyalar</NavLink></li>
+                                <AuthorizeView Roles="Admin,Mağaza Yöneticisi,Analist" Context="adminContext">
                                     <li><hr class="dropdown-divider mx-2"></li>
                                     <li class="px-3 py-1"><span class="text-muted" style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em;">Yönetim</span></li>
-                                    <li><NavLink class="dropdown-item py-2 fw-semibold" href="admin/dashboard"><i class="bi bi-speedometer2 me-2 text-muted"></i>Dashboard</NavLink></li>
-                                    <li><NavLink class="dropdown-item py-2" href="admin/products"><i class="bi bi-box me-2 text-muted"></i>Ürünler</NavLink></li>
-                                    <li><NavLink class="dropdown-item py-2" href="admin/orders"><i class="bi bi-receipt me-2 text-muted"></i>Siparişler</NavLink></li>
-                                    <li><NavLink class="dropdown-item py-2" href="admin/discounts"><i class="bi bi-percent me-2 text-muted"></i>İndirimler</NavLink></li>
-                                    <li><NavLink class="dropdown-item py-2" href="admin/inventory"><i class="bi bi-archive me-2 text-muted"></i>Stok</NavLink></li>
+                                    <AuthorizeView Roles="Admin,Analist" Context="ctx1">
+                                        <li><NavLink class="dropdown-item py-2 fw-semibold" href="/admin/dashboard"><i class="bi bi-speedometer2 me-2 text-muted"></i>Dashboard</NavLink></li>
+                                        <li><NavLink class="dropdown-item py-2" href="/admin/analytics"><i class="bi bi-bar-chart me-2 text-muted"></i>Analitik</NavLink></li>
+                                    </AuthorizeView>
+                                    <AuthorizeView Roles="Admin,Mağaza Yöneticisi" Context="ctx2">
+                                        <li><NavLink class="dropdown-item py-2" href="/admin/products"><i class="bi bi-box me-2 text-muted"></i>Ürünler</NavLink></li>
+                                    </AuthorizeView>
+                                    <AuthorizeView Roles="Admin,Analist" Context="ctx3">
+                                        <li><NavLink class="dropdown-item py-2" href="/admin/orders"><i class="bi bi-receipt me-2 text-muted"></i>Siparişler</NavLink></li>
+                                        <li><NavLink class="dropdown-item py-2" href="/admin/customers"><i class="bi bi-people me-2 text-muted"></i>Müşteriler</NavLink></li>
+                                    </AuthorizeView>
+                                    <AuthorizeView Roles="Admin,Mağaza Yöneticisi" Context="ctx4">
+                                        <li><NavLink class="dropdown-item py-2" href="/admin/discounts"><i class="bi bi-percent me-2 text-muted"></i>İndirimler</NavLink></li>
+                                        <li><NavLink class="dropdown-item py-2" href="/admin/inventory"><i class="bi bi-archive me-2 text-muted"></i>Stok</NavLink></li>
+                                    </AuthorizeView>
+                                    <AuthorizeView Roles="Admin" Context="ctx5">
+                                        <li><NavLink class="dropdown-item py-2" href="/admin/users"><i class="bi bi-people me-2 text-muted"></i>Kullanıcılar</NavLink></li>
+                                    </AuthorizeView>
                                 </AuthorizeView>
                                 <li><hr class="dropdown-divider mx-2"></li>
                                 <li><a class="dropdown-item py-2 text-danger" @onclick="Logout" href="javascript:void(0)"><i class="bi bi-box-arrow-right me-2"></i>Çıkış Yap</a></li>
@@ -80,8 +93,8 @@
                         </div>
                     </Authorized>
                     <NotAuthorized>
-                        <NavLink class="nav-link nav-link-bold" href="login">Giriş</NavLink>
-                        <NavLink class="btn btn-primary px-4 py-2" href="register">Kayıt Ol</NavLink>
+                        <NavLink class="nav-link nav-link-bold" href="/login">Giriş</NavLink>
+                        <NavLink class="btn btn-primary px-4 py-2" href="/register">Kayıt Ol</NavLink>
                     </NotAuthorized>
                 </AuthorizeView>
             </div>
@@ -203,6 +216,16 @@
     [Inject] private WebUI.Providers.CustomAuthStateProvider AuthProvider { get; set; } = default!;
 
     private int basketItemCount = 0;
+    private string userRole = "Üye";
+
+    private static string GetRoleDisplay(string? role) => role switch
+    {
+        "Admin" => "Admin",
+        "Mağaza Yöneticisi" => "Mağaza Yöneticisi",
+        "Marketingci" => "Mağaza Yöneticisi",
+        "Analist" => "Analist",
+        _ => "Üye"
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -210,6 +233,17 @@
         {
             BasketService.OnBasketChanged += HandleBasketChanged;
             await LoadBasketCount();
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var roleClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            userRole = roleClaim switch
+            {
+                "Admin" => "Admin",
+                "Mağaza Yöneticisi" => "Mağaza Yöneticisi",
+                "Marketingci" => "Mağaza Yöneticisi",
+                "Analist" => "Analist",
+                _ => "Üye"
+            };
+            StateHasChanged();
         }
     }
 

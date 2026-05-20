@@ -272,6 +272,115 @@ public class ProductsController : ControllerBase
         ReviewCount = p.ReviewCount
     };
 
+    [HttpGet("export")]
+    [Authorize(Roles = "Admin,Mağaza Yöneticisi")]
+    public async Task<IActionResult> ExportProducts()
+    {
+        var products = await _context.Products.AsNoTracking().ToListAsync();
+
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var ws = workbook.Worksheets.Add("Ürünler");
+
+        ws.Cell(1, 1).SetValue("Ad");
+        ws.Cell(1, 2).SetValue("Kategori");
+        ws.Cell(1, 3).SetValue("Fiyat");
+        ws.Cell(1, 4).SetValue("Stok");
+        ws.Cell(1, 5).SetValue("Ozellikler");
+        ws.Cell(1, 6).SetValue("Gorsel URL");
+
+        var header = ws.Range("A1:F1");
+        header.Style.Font.Bold = true;
+        header.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.Black;
+        header.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+
+        for (int i = 0; i < products.Count; i++)
+        {
+            var p = products[i];
+            ws.Cell(2 + i, 1).Value = p.Name;
+            ws.Cell(2 + i, 2).Value = p.Category;
+            ws.Cell(2 + i, 3).Value = (double)p.Price;
+            ws.Cell(2 + i, 3).Style.NumberFormat.Format = "[$₺-tr-TR]#,##0.00";
+            ws.Cell(2 + i, 4).Value = p.StockQuantity;
+            ws.Cell(2 + i, 5).Value = string.Join(", ", p.Features ?? new List<string>());
+            ws.Cell(2 + i, 6).Value = p.ImageUrl ?? "";
+        }
+
+        ws.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+
+        return File(stream.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"urunler_{DateTime.Now:yyyyMMdd}.xlsx");
+    }
+
+    [HttpPost("import")]
+    [Authorize(Roles = "Admin,Mağaza Yöneticisi")]
+    public async Task<IActionResult> ImportProducts(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("Dosya seçilmedi.");
+
+        var results = new List<string>();
+        int imported = 0;
+
+        using var stream = new MemoryStream();
+        await file.CopyToAsync(stream);
+
+        using var workbook = new ClosedXML.Excel.XLWorkbook(stream);
+        var ws = workbook.Worksheets.First();
+        var rows = ws.RowsUsed().Skip(1);
+
+        foreach (var row in rows)
+        {
+            try
+            {
+                var name = row.Cell(1).GetString().Trim();
+                var category = row.Cell(2).GetString().Trim();
+                var priceStr = row.Cell(3).GetString().Trim().Replace("₺","").Replace(".","").Replace(",",".");
+                decimal price = decimal.TryParse(priceStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p) ? p : 0;
+                var stockStr = row.Cell(4).GetString().Trim();
+                int stock = int.TryParse(stockStr, out var s) ? s : 0;
+                var features = row.Cell(5).GetString()
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(f => f.Trim())
+                    .ToList();
+                var imageUrl = row.Cell(6).GetString().Trim();
+
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(category))
+                {
+                    results.Add($"Satır {row.RowNumber()}: Ad ve Kategori boş olamaz.");
+                    continue;
+                }
+
+                var product = new Product
+                {
+                    Name = name,
+                    Category = category,
+                    Price = price,
+                    StockQuantity = stock,
+                    Features = features,
+                    ImageUrl = imageUrl ?? ""
+                };
+
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
+                _ = PublishProductCreated(product);
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                results.Add($"Satır {row.RowNumber()}: {ex.Message}");
+            }
+        }
+
+        if (imported > 0)
+            await _cache.RemoveProductListAsync();
+
+        return Ok(new { Imported = imported, Errors = results });
+    }
+
     private async Task PublishProductCreated(Product product)
     {
         try { await _eventBus.PublishAsync(new Common.Events.ProductCreatedIntegrationEvent(product.Id.ToString(), product.Name, product.StockQuantity)); }

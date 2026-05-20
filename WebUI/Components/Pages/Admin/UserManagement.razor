@@ -1,0 +1,71 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+@inject AuthService AuthService
+@inject ILocalStorageService LocalStorage
+@inject ToastService ToastService
+
+<h3>Kullanıcı Yönetimi</h3>
+
+@if (users == null)
+{
+    <p>Yükleniyor...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Kullanıcı Adı</th>
+                <th>E-Posta</th>
+                <th>Rol</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.UserName</td>
+                    <td>@user.Email</td>
+                    <td>
+                        <select value="@user.Role" @onchange="e => ChangeRole(user.Id, e.Value?.ToString())">
+                            <option value="User">Üye</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Mağaza Yöneticisi">Mağaza Yöneticisi</option>
+                            <option value="Analist">Analist</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteUser(user.Id)">Sil</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<UserManagementDto>? users;
+    private string? token;
+
+    protected override async Task OnInitializedAsync()
+    {
+        token = await LocalStorage.GetItemAsync<string>("authToken");
+        users = await AuthService.GetUsers(token!);
+    }
+
+    private async Task ChangeRole(int userId, string? role)
+    {
+        if (role == null) return;
+        await AuthService.UpdateUserRole(token!, userId, role);
+        ToastService.Notify("Rol güncellendi.", ToastLevel.Success);
+        users = await AuthService.GetUsers(token!);
+    }
+
+    private async Task DeleteUser(int userId)
+    {
+        await AuthService.DeleteUser(token!, userId);
+        ToastService.Notify("Kullanıcı silindi.", ToastLevel.Success);
+        users = await AuthService.GetUsers(token!);
+    }
+}

@@ -1,0 +1,154 @@
+@page "/admin/customers"
+@attribute [Authorize(Roles = "Admin,Analist")]
+@inject OrderService OrderService
+@inject AuthService AuthService
+@inject ILocalStorageService LocalStorage
+@using Common.DTOs
+
+<div class="container-fluid mt-4 px-4 pb-5">
+    <div class="admin-header mb-4">
+        <div>
+            <h2 class="admin-title"><i class="bi bi-people-fill me-2 text-primary"></i> Müşteri Yönetimi</h2>
+            <div class="admin-subtitle text-muted">Müşteri sipariş istatistiklerini görüntüleyin.</div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border"></div>
+        </div>
+    }
+    else if (!customers.Any())
+    {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-people fs-1 d-block mb-2"></i>
+            <p>Henüz sipariş veren müşteri bulunmuyor.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card stat-blue">
+                    <div class="stat-icon"><i class="bi bi-people"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Toplam Müşteri</div>
+                        <div class="stat-value">@customers.Count</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-green">
+                    <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Toplam Ciro</div>
+                        <div class="stat-value">@customers.Sum(c => c.TotalSpent).ToString("C2")</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-purple">
+                    <div class="stat-icon"><i class="bi bi-receipt"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Toplam Sipariş</div>
+                        <div class="stat-value">@customers.Sum(c => c.OrderCount)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sıra</th>
+                            <th>Kullanıcı</th>
+                            <AuthorizeView Roles="Admin" Context="adminCtx">
+                                <th>E-Posta</th>
+                            </AuthorizeView>
+                            <th class="text-center">Sipariş Sayısı</th>
+                            <th class="text-end">Toplam Harcama</th>
+                            <th>Son Sipariş</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int sira = 1; }
+                        @foreach (var c in customers)
+                        {
+                            <tr>
+                                <td><span class="badge bg-dark">#@sira</span></td>
+                                <td class="fw-semibold">@c.UserName</td>
+                                <AuthorizeView Roles="Admin" Context="adminCtx2">
+                                    <td class="text-muted small">@(userEmails.GetValueOrDefault(c.UserName, "-"))</td>
+                                </AuthorizeView>
+                                <td class="text-center">@c.OrderCount sipariş</td>
+                                <td class="text-end fw-bold text-success">@c.TotalSpent.ToString("C2")</td>
+                                <td class="text-muted small">@c.LastOrderDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                            </tr>
+                            sira++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .admin-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:16px; border-bottom:1px solid #e5e5e5; }
+    .admin-title { font-weight:800; margin-bottom:4px; }
+    .admin-subtitle { font-size:0.9rem; }
+    .stat-card { background:#fff; border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px; border:1px solid #e5e5e5; }
+    .stat-icon { width:60px; height:60px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; flex-shrink:0; }
+    .stat-blue .stat-icon { background:#E3F2FD; color:#1976D2; }
+    .stat-green .stat-icon { background:#E8F5E9; color:#2E7D32; }
+    .stat-purple .stat-icon { background:#F3E5F5; color:#7B1FA2; }
+    .stat-label { color:#666; font-size:0.85rem; font-weight:500; }
+    .stat-value { font-size:1.6rem; font-weight:800; color:#000; }
+    .admin-card { background:#fff; border:1px solid #e5e5e5; border-radius:16px; padding:24px; }
+</style>
+
+@code {
+    private List<CustomerReportDto> customers = new();
+    private Dictionary<string, string> userEmails = new();
+    private bool isLoading = true;
+    private string? token;
+    private string? userRole;
+
+    protected override async Task OnInitializedAsync()
+    {
+        token = await LocalStorage.GetItemAsync<string>("authToken");
+        userRole = await LocalStorage.GetItemAsync<string>("userRole");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var rawCustomers = await OrderService.GetCustomers(token!);
+            customers = rawCustomers.Select(c => new CustomerReportDto
+            {
+                UserName = c.UserName,
+                OrderCount = c.OrderCount,
+                TotalSpent = c.TotalSpent,
+                LastOrderDate = c.LastOrderDate
+            }).ToList();
+
+            if (userRole == "Admin")
+            {
+                var users = await AuthService.GetUsers(token!);
+                userEmails = users.ToDictionary(u => u.UserName, u => u.Email);
+            }
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

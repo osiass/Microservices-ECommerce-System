@@ -2,17 +2,20 @@
 using Basket.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Basket.API.Migrations
+namespace Basket.API.Data.Migrations
 {
     [DbContext(typeof(BasketContext))]
-    partial class BasketContextModelSnapshot : ModelSnapshot
+    [Migration("20260508072249_AddDiscountToCart")]
+    partial class AddDiscountToCart
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

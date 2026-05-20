@@ -234,6 +234,8 @@
                     ExpirationMonth = int.TryParse(expMonth, out var m) ? m : 0,
                     ExpirationYear = int.TryParse(expYear, out var y) ? y : 0,
                     CVV = cvv,
+                    Discount = basket.Discount,
+                    CouponCode = basket.CouponCode,
                     Items = basket.Items
                 };
 
