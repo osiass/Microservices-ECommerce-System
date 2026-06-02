@@ -28,8 +28,10 @@ spec:
             - rabbitmq-diagnostics
             - -q
             - check_running
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 30
+          timeoutSeconds: 15
+          failureThreshold: 3
         readinessProbe:
           tcpSocket:
             port: 5672

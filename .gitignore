@@ -380,3 +380,7 @@ FodyWeavers.xsd
 .vscode/
 .idea/
 
+# Çalışma notları ve sunum dosyaları
+yapilanlar.md
+sunum/
+

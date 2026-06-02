@@ -9,6 +9,8 @@ services:
       - POSTGRES_DB=CatalogDb
     ports:
       - "5431:5432"
+    volumes:
+      - catalog_data:/var/lib/postgresql/data
 
   # identity veritabanı
   identity.db:
@@ -20,8 +22,10 @@ services:
       - POSTGRES_DB=IdentityDb
     ports:
       - "5432:5432"
+    volumes:
+      - identity_data:/var/lib/postgresql/data
 
-  # Basket Veritabanı 
+  # Basket Veritabanı
   basket.db:
     image: postgres:latest
     container_name: basket.db
@@ -31,6 +35,8 @@ services:
       - POSTGRES_DB=BasketDb
     ports:
       - "5433:5432"
+    volumes:
+      - basket_data:/var/lib/postgresql/data
 
   # Discount Veritabanı
   discount.db:
@@ -42,6 +48,8 @@ services:
       - POSTGRES_DB=DiscountDb
     ports:
       - "5434:5432"
+    volumes:
+      - discount_data:/var/lib/postgresql/data
 
   # Order Veritabanı
   order.db:
@@ -53,6 +61,8 @@ services:
       - POSTGRES_DB=OrderDb
     ports:
       - "5435:5432"
+    volumes:
+      - order_data:/var/lib/postgresql/data
 
   # Payment Veritabanı
   payment.db:
@@ -64,6 +74,8 @@ services:
       - POSTGRES_DB=PaymentDb
     ports:
       - "5436:5432"
+    volumes:
+      - payment_data:/var/lib/postgresql/data
 
   # Inventory Veritabanı
   inventory.db:
@@ -75,6 +87,17 @@ services:
       - POSTGRES_DB=InventoryDb
     ports:
       - "5437:5432"
+    volumes:
+      - inventory_data:/var/lib/postgresql/data
+
+volumes:
+  catalog_data:
+  identity_data:
+  basket_data:
+  discount_data:
+  order_data:
+  payment_data:
+  inventory_data:
 
 networks:
   default:

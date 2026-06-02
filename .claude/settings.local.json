@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(node -e ' *)",
+      "Read(//c/Users/lenovo/.claude/projects/c--Users-lenovo-source-repos-ECommerce/**)"
     ]
   }
 }
