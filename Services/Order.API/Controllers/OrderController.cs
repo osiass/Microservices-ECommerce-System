@@ -36,32 +36,19 @@ namespace Order.API.Controllers
             }
         }
 
-        [AllowAnonymous]
-        [HttpGet("test-auth")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> TestAuth()
+        private bool IsSelfOrStaff(string? userName)
         {
-            var authHeader = Request.Headers["Authorization"].ToString();
-            bool dbOnline = false;
-            try {
-                dbOnline = await _context.Database.CanConnectAsync();
-            } catch { }
-
-            return Ok(new
-            {
-                IsAuthenticated = User.Identity?.IsAuthenticated,
-                UserName = User.Identity?.Name,
-                Claims = User.Claims.Select(c => new { c.Type, c.Value }),
-                HasHeader = !string.IsNullOrEmpty(authHeader),
-                HeaderValue = authHeader.Length > 20 ? authHeader.Substring(0, 20) + "..." : authHeader,
-                DatabaseOnline = dbOnline
-            });
+            if (User.IsInRole("Admin") || User.IsInRole("Analist")) return true;
+            var identity = User.Identity?.Name?.Trim().ToLower();
+            return identity == (userName?.Trim().ToLower() ?? string.Empty);
         }
 
         [HttpGet("{userName}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<OrderDto>))]
         public async Task<ActionResult<IEnumerable<OrderDto>>> GetOrders(string userName)
         {
+            if (!IsSelfOrStaff(userName)) return Forbid();
+
             var orders = await _context.Orders
                 .AsNoTracking()
                 .Include(x => x.OrderItems)
@@ -83,6 +70,7 @@ namespace Order.API.Controllers
                 .FirstOrDefaultAsync(o => o.Id == id);
 
             if (order == null) return NotFound();
+            if (!IsSelfOrStaff(order.UserName)) return Forbid();
 
             return Ok(MapToOrderDto(order));
         }
@@ -91,6 +79,8 @@ namespace Order.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
         public async Task<ActionResult<bool>> CheckPurchase(string userName, string productId)
         {
+            if (!IsSelfOrStaff(userName)) return Forbid();
+
             var cleanedUserName = userName?.Trim().ToLower() ?? string.Empty;
             
             var hasBought = await _context.Orders
@@ -172,7 +162,28 @@ namespace Order.API.Controllers
                 Amount = checkoutData.Items.Sum(x => x.Price * x.Quantity) - (decimal)checkoutData.Discount
             };
 
-            // Payment.API'ye istek at
+            var inventoryClient = _httpClientFactory.CreateClient("inventory-api");
+            try
+            {
+                using var stockCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var stocks = await inventoryClient.GetFromJsonAsync<List<StockDto>>("api/Stock", stockCts.Token);
+                if (stocks != null)
+                {
+                    var stockByProduct = stocks
+                        .GroupBy(s => s.ProductId)
+                        .ToDictionary(g => g.Key, g => g.First().Quantity);
+                    foreach (var item in checkoutData.Items)
+                    {
+                        if (stockByProduct.TryGetValue(item.ProductId, out var available) && available < item.Quantity)
+                            return BadRequest($"'{item.ProductName}' için yeterli stok yok. Mevcut: {available}, istenen: {item.Quantity}");
+                    }
+                }
+            }
+            catch (Exception stockEx)
+            {
+                Console.WriteLine($"[Order.API] Stok kontrolü atlandı (envanter erişilemedi): {stockEx.Message}");
+            }
+
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -214,7 +225,24 @@ namespace Order.API.Controllers
                 };
 
                 _context.Orders.Add(newOrder);
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception saveEx)
+                {
+                    Console.WriteLine($"[Order.API] Sipariş kaydı başarısız, ödeme iptal ediliyor. TransId: {transactionId}, Hata: {saveEx.Message}");
+                    try
+                    {
+                        using var voidCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                        await client.PostAsync($"api/payment/{transactionId}/void", null, voidCts.Token);
+                    }
+                    catch (Exception voidEx)
+                    {
+                        Console.WriteLine($"[Order.API] KRİTİK: Ödeme iptali başarısız! TransId: {transactionId} için elle iade gerekli. Hata: {voidEx.Message}");
+                    }
+                    return BadRequest("Siparişiniz kaydedilemedi, ödemeniz iade edildi. Lütfen tekrar deneyin.");
+                }
                 Console.WriteLine($"[Order.API] Sipariş kaydedildi. OrderId: {newOrder.Id}");
 
                 // RabbitMQ'ya event fırlat

@@ -4,8 +4,11 @@ var builder = DistributedApplication.CreateBuilder(args);
 var rabbitmq = builder.AddRabbitMQ("messaging");
 var redis = builder.AddRedis("cache");
 
-// JWT Secret Key - 32 karakter tam uyumlu
-var jwtKey = "ThisSecureKeyIsExactly32CharsLong!";
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException(
+        "Jwt:Key yapılandırılmadı. AppHost projesinde şunu çalıştırın: " +
+        "dotnet user-secrets set \"Jwt:Key\" \"<en az 32 karakterlik gizli anahtar>\"");
 
 // Servisleri tanımla
 var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
@@ -20,12 +23,13 @@ var basketApi = builder.AddProject<Projects.Basket_API>("basket-api")
     .WithEnvironment("Jwt__Key", jwtKey);
 var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api")
     .WithEnvironment("Jwt__Key", jwtKey);
+var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
+    .WithReference(rabbitmq)
+    .WithEnvironment("Jwt__Key", jwtKey);
 var orderApi = builder.AddProject<Projects.Order_API>("order-api")
     .WithReference(rabbitmq)
     .WithReference(paymentApi)
-    .WithEnvironment("Jwt__Key", jwtKey);
-var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
-    .WithReference(rabbitmq)
+    .WithReference(inventoryApi)
     .WithEnvironment("Jwt__Key", jwtKey);
 var notificationApi = builder.AddProject<Projects.Notification_API>("notification-api")
     .WithReference(rabbitmq);

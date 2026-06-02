@@ -384,3 +384,7 @@ FodyWeavers.xsd
 yapilanlar.md
 sunum/
 
+# Aspire/aspirate üretilen artefaktlar (gizli anahtar içerir)
+ECommerce.AppHost/manifest.json
+ECommerce.AppHost/aspirate-output/secrets.yaml
+

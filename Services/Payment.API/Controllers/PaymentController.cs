@@ -3,6 +3,7 @@ using Common.DTOs;
 using System.Threading.Tasks;
 using Payment.API.Data;
 using Payment.API.Entities;
+using Microsoft.EntityFrameworkCore;
 
 // Order.API'den gelecek ödeme HTTP isteklerini bu Controller üzerinden karşılayacak.
 namespace Payment.API.Controllers
@@ -69,6 +70,19 @@ namespace Payment.API.Controllers
                 Console.WriteLine($"[Payment.API] Ödeme kaydedilirken HATA: {fullError}");
                 return StatusCode(500, new { type = "Server Error", title = "Sunucu Hatası", detail = fullError });
             }
+        }
+
+        [HttpPost("{transactionId}/void")]
+        public async Task<IActionResult> VoidPayment(string transactionId)
+        {
+            var tx = await _context.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+            if (tx == null) return NotFound();
+            if (tx.Status != "Voided")
+            {
+                tx.Status = "Voided";
+                await _context.SaveChangesAsync();
+            }
+            return Ok(new { Success = true });
         }
     }
 }

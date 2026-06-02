@@ -45,6 +45,11 @@ builder.Services.AddHttpClient("payment-api", client =>
     client.BaseAddress = new Uri("https+http://payment-api");
 });
 
+builder.Services.AddHttpClient("inventory-api", client =>
+{
+    client.BaseAddress = new Uri("https+http://inventory-api");
+});
+
 builder.Services.AddDbContext<OrderContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 

@@ -65,30 +65,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             NameClaimType = System.Security.Claims.ClaimTypes.Name
         };
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context => 
-            {
-                // Sorunu anlamak için hata mesajını headera ekle
-                context.Response.Headers.Append("X-Auth-Error", context.Exception.Message);
-                return Task.CompletedTask;
-            },
-            OnChallenge = context => 
-            {
-                // Ham header kontrolü (Typed değil, direkt string)
-                var rawHeader = context.Request.Headers["Authorization"].ToString();
-                var allHeaderKeys = string.Join(",", context.Request.Headers.Keys);
-                
-                // Tüm gelen başlıkları birleştirip yeni bir başlık olarak ekle
-                var allHeadersString = string.Join("; ", context.Request.Headers.Select(h => $"{h.Key}: {string.Join(",", h.Value)}"));
-                context.Response.Headers.Append("X-Debug-All-Headers", allHeadersString);
-
-                context.Response.Headers.Append("X-Debug-Header", string.IsNullOrEmpty(rawHeader) ? "MISSING" : "PRESENT");
-                context.Response.Headers.Append("X-Debug-Keys", allHeaderKeys);
-                context.Response.Headers.Append("X-Auth-Challenge", context.ErrorDescription ?? "Unauthorized");
-                return Task.CompletedTask;
-            }
-        };
     });
 
 builder.Services.AddAuthorization();

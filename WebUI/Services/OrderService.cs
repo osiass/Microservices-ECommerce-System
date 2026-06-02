@@ -105,24 +105,6 @@ namespace WebUI.Services
                 return null;
             }
         }
-        public async Task<string> GetAuthStatus(string token)
-        {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(token))
-                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                else
-                    _httpClient.DefaultRequestHeaders.Authorization = null;
-
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                var response = await _httpClient.GetAsync("/order/api/order/test-auth", cts.Token);
-                return await response.Content.ReadAsStringAsync();
-            }
-            catch (Exception ex)
-            {
-                return $"Hata: {ex.Message}";
-            }
-        }
         public async Task<List<OrderDto>> GetAllOrders(string token)
         {
             try

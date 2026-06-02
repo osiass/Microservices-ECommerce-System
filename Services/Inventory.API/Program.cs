@@ -65,19 +65,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             NameClaimType = System.Security.Claims.ClaimTypes.Name
         };
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context => 
-            {
-                context.Response.Headers.Append("X-Auth-Error", context.Exception.Message);
-                return Task.CompletedTask;
-            },
-            OnChallenge = context => 
-            {
-                context.Response.Headers.Append("X-Auth-Challenge", context.ErrorDescription ?? "Unauthorized");
-                return Task.CompletedTask;
-            }
-        };
     });
 
 builder.Services.AddAuthorization();

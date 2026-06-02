@@ -61,20 +61,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             NameClaimType = System.Security.Claims.ClaimTypes.Name
         };
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
-            {
-                Console.WriteLine($"[Discount.API] JWT AUTH FAILED: {context.Exception.Message}");
-                return Task.CompletedTask;
-            },
-            OnMessageReceived = context =>
-            {
-                var token = context.Request.Headers["Authorization"].FirstOrDefault();
-                Console.WriteLine($"[Discount.API] TOKEN RECEIVED: {(string.IsNullOrEmpty(token) ? "YOK/BOŞ" : token[..Math.Min(50, token.Length)] + "...")}");
-                return Task.CompletedTask;
-            }
-        };
     });
 
 builder.Services.AddAuthorization();

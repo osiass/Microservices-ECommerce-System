@@ -28,10 +28,20 @@ namespace Basket.API.Controllers
             _logger = logger;
         }
 
+        private bool IsAuthorizedForBasket(string? userName)
+        {
+            var cleaned = userName?.Trim().ToLower() ?? string.Empty;
+            if (cleaned.StartsWith("guest-")) return true;
+            var identity = User.Identity?.Name?.Trim().ToLower();
+            return User.Identity?.IsAuthenticated == true && identity == cleaned;
+        }
+
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ShoppingCart))]
         public async Task<ActionResult<ShoppingCart>> GetBasket(string userName)
         {
+            if (!IsAuthorizedForBasket(userName)) return Forbid();
+
             var cleanedUserName = userName?.Trim().ToLower() ?? string.Empty;
             
             var basket = await _context.ShoppingCarts
@@ -50,6 +60,8 @@ namespace Basket.API.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ShoppingCart>> UpdateBasket([FromBody] ShoppingCart shoppingCart)
         {
+            if (!IsAuthorizedForBasket(shoppingCart?.UserName)) return Forbid();
+
             shoppingCart.UserName = shoppingCart.UserName?.Trim().ToLower() ?? string.Empty;
             
             // Katalog ve İndirim bilgilerini tazele
@@ -83,6 +95,8 @@ namespace Basket.API.Controllers
         {
             if (request == null || string.IsNullOrEmpty(request.UserName))
                 return BadRequest("Invalid request data.");
+
+            if (!IsAuthorizedForBasket(request.UserName)) return Forbid();
 
             var userName = request.UserName.ToLower();
             
@@ -132,6 +146,8 @@ namespace Basket.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult> DeleteBasket(string userName)
         {
+            if (!IsAuthorizedForBasket(userName)) return Forbid();
+
             var cleanedUserName = userName?.Trim().ToLower() ?? string.Empty;
             
             var existingBasket = await _context.ShoppingCarts
